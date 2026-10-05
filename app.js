@@ -200,6 +200,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (previewDate) {
         previewDate.textContent = formatDate(new Date());
     }
+
+    // Check for auto-transfer code in URL (?code=XXXX-XXXX-XXXX)
+    checkUrlForTransferCode();
 });
 
 // ============ PARTICLES ============
@@ -307,6 +310,9 @@ function switchTab(tabName) {
     if (tabName === 'results') {
         renderPastDraws();
         updateCheckerDrawOptions();
+    }
+    if (tabName === 'crypto') {
+        refreshTabpageCryptoUI();
     }
 }
 
@@ -1423,10 +1429,1106 @@ function showToast(icon, message, type = 'info') {
     }, 3000);
 }
 
-// Close deposit modal / win notification with Escape key
+// Close deposit modal / win notification / crypto transfer modal with Escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeDepositModal();
         closeWinNotification();
+        closeCryptoTransferModal();
     }
 });
+
+// ==========================================================================
+// CROSS-PLATFORM MONEY TRANSFER ENGINE (DOVESO <-> WEBCRYPTO)
+// 12-Character Alphanumeric Cryptographic Voucher Code
+// ==========================================================================
+const TRANSFER_CHARSET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 32 unambiguous chars
+const TRANSFER_REDEEMED_KEY = "crypto_doveso_redeemed_codes_v1";
+const DOVESO_TRANSFER_HISTORY_KEY = "crypto_doveso_history_doveso";
+const DOVESO_EXCHANGE_RATE = 25480; // 1 USDT = 25,480 VND
+
+let currentActiveDoVeSoCode = "";
+
+// 64-bit Linear Congruential Generator for bit diffusion
+function transferLcg(seed) {
+    let s = BigInt(seed);
+    s = (s * 6364136223846793005n + 1442695040888963407n) & 0xFFFFFFFFFFFFFFFFn;
+    return s;
+}
+
+// 10-bit Checksum Generator
+function computeTransferChecksum(type, amountUnit, nonce) {
+    let h = 0x1337;
+    const salt = 0x5a5a;
+    h = ((h << 5) - h + type) & 0x3fffffff;
+    h = ((h << 5) - h + Number(BigInt(amountUnit) & 0xffffn)) & 0x3fffffff;
+    h = ((h << 5) - h + Number((BigInt(amountUnit) >> 16n) & 0xffffn)) & 0x3fffffff;
+    h = ((h << 5) - h + Number((BigInt(amountUnit) >> 32n) & 0xffffn)) & 0x3fffffff;
+    h = ((h << 5) - h + nonce) & 0x3fffffff;
+    h = ((h << 5) - h + salt) & 0x3fffffff;
+    return (h ^ (h >>> 10) ^ (h >>> 20)) & 0x3ff;
+}
+
+// Encode 60 bits into 12 characters:
+// Type 1 = WebCrypto -> DoVeSo (amountUnit in 1,000 VND)
+// Type 2 = DoVeSo -> WebCrypto (amountUnit in USDT cents)
+function encodeTransferCode(type, amountUnit) {
+    const nonce = Math.floor(Math.random() * 1024);
+    const checksum = computeTransferChecksum(type, amountUnit, nonce);
+
+    let payload = (BigInt(type & 0xf) << 36n) | (BigInt(amountUnit) & 0xfffffffffn);
+    let mask = (transferLcg(nonce ^ 0xA5A5) >> 16n) & 0xffffffffffn;
+    let scrambledPayload = payload ^ mask;
+
+    let val = (scrambledPayload << 20n) | (BigInt(nonce & 0x3ff) << 10n) | BigInt(checksum & 0x3ff);
+
+    let code = "";
+    for (let i = 0; i < 12; i++) {
+        const shift = BigInt((11 - i) * 5);
+        const index = Number((val >> shift) & 0x1fn);
+        code += TRANSFER_CHARSET[index];
+    }
+    return code;
+}
+
+// Decode and verify 12-character code
+function decodeTransferCode(codeStr) {
+    if (!codeStr) return null;
+    const clean = codeStr.toUpperCase().replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/g, '');
+    if (clean.length !== 12) return null;
+
+    let val = 0n;
+    for (let i = 0; i < 12; i++) {
+        const idx = TRANSFER_CHARSET.indexOf(clean[i]);
+        if (idx === -1) return null;
+        val = (val << 5n) | BigInt(idx);
+    }
+
+    const checksum = Number(val & 0x3ffn);
+    const nonce = Number((val >> 10n) & 0x3ffn);
+    const scrambledPayload = (val >> 20n) & 0xffffffffffn;
+
+    let mask = (transferLcg(nonce ^ 0xA5A5) >> 16n) & 0xffffffffffn;
+    let payload = scrambledPayload ^ mask;
+
+    const type = Number((payload >> 36n) & 0xfn);
+    const amountUnit = Number(payload & 0xfffffffffn);
+
+    const expectedChecksum = computeTransferChecksum(type, amountUnit, nonce);
+    if (checksum !== expectedChecksum) {
+        return null;
+    }
+
+    return {
+        type,
+        amountUnit,
+        nonce,
+        code: clean,
+        formatted: `${clean.slice(0, 4)}-${clean.slice(4, 8)}-${clean.slice(8, 12)}`
+    };
+}
+
+// BroadcastChannel Synchronization
+let transferSyncChannel = null;
+try {
+    if (typeof BroadcastChannel !== 'undefined') {
+        transferSyncChannel = new BroadcastChannel('crypto_doveso_sync_bus');
+        transferSyncChannel.onmessage = (e) => {
+            if (e.data && e.data.action === 'REDEEMED') {
+                renderDoVeSoTransferHistory();
+            }
+        };
+    }
+} catch (err) {}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === TRANSFER_REDEEMED_KEY) {
+        renderDoVeSoTransferHistory();
+    }
+});
+
+function getRedeemedCodesList() {
+    try {
+        const raw = localStorage.getItem(TRANSFER_REDEEMED_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function markCodeAsRedeemedInStorage(code, meta) {
+    const list = getRedeemedCodesList();
+    const clean = code.replace(/-/g, '').toUpperCase();
+    if (!list.some(item => (typeof item === 'string' ? item : item.code) === clean)) {
+        list.push({
+            code: clean,
+            time: new Date().toISOString(),
+            ...meta
+        });
+        localStorage.setItem(TRANSFER_REDEEMED_KEY, JSON.stringify(list));
+    }
+    if (transferSyncChannel) {
+        try {
+            transferSyncChannel.postMessage({ action: 'REDEEMED', code: clean });
+        } catch (e) {}
+    }
+}
+
+function isCodeRedeemedInStorage(code) {
+    const list = getRedeemedCodesList();
+    const clean = code.replace(/-/g, '').toUpperCase();
+    return list.some(item => (typeof item === 'string' ? item : item.code) === clean);
+}
+
+function getDoVeSoTransferHistory() {
+    try {
+        const raw = localStorage.getItem(DOVESO_TRANSFER_HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveDoVeSoTransferHistory(history) {
+    try {
+        localStorage.setItem(DOVESO_TRANSFER_HISTORY_KEY, JSON.stringify(history));
+    } catch (e) {}
+}
+
+// Check URL params for ?code=XXXX-XXXX-XXXX or ?transfer_code=XXXX-XXXX-XXXX
+function checkUrlForTransferCode() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code') || urlParams.get('transfer_code');
+        if (code) {
+            setTimeout(() => {
+                if (confirm(`Bạn có muốn nạp mã chuyển tiền [${code}] từ WebCrypto vào số dư không?`)) {
+                    redeemWebCryptoCodeInDoVeSo(code);
+                } else {
+                    openCryptoTransferModal('redeem');
+                    const inp = document.getElementById('input-doveso-code');
+                    if (inp) {
+                        inp.value = code;
+                        onDoVeSoCodeInput(code);
+                    }
+                }
+            }, 500);
+        }
+    } catch (e) {}
+}
+
+// Modal Toggle
+function openCryptoTransferModal(initialTab = 'redeem') {
+    const modal = document.getElementById('crypto-transfer-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        switchDoVeSoTransferTab(initialTab);
+        refreshDoVeSoTransferUI();
+    }
+}
+
+function closeCryptoTransferModal(e) {
+    if (e && e.target && e.target.closest && e.target.closest('.modal-card')) return;
+    const modal = document.getElementById('crypto-transfer-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+}
+
+function switchDoVeSoTransferTab(tab) {
+    const tabs = ['redeem', 'create', 'history'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`doveso-tab-${t}`);
+        const panel = document.getElementById(`doveso-panel-${t}`);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (panel) {
+            panel.style.display = t === tab ? 'block' : 'none';
+            if (t === tab) panel.classList.add('active');
+            else panel.classList.remove('active');
+        }
+    });
+
+    if (tab === 'history') {
+        renderDoVeSoTransferHistory();
+    }
+}
+
+function refreshDoVeSoTransferUI() {
+    const availEl = document.getElementById('doveso-avail-text');
+    if (availEl) availEl.textContent = formatCurrency(state.balance);
+
+    const outInput = document.getElementById('input-doveso-out-amount');
+    if (outInput) onDoVeSoOutAmountChange(outInput.value);
+
+    renderDoVeSoTransferHistory();
+}
+
+// Real-time validation feedback for 12-char code
+function onDoVeSoCodeInput(val) {
+    const feedback = document.getElementById('doveso-code-feedback');
+    if (!feedback) return;
+
+    const clean = val.replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/gi, '').toUpperCase();
+    if (clean.length < 12) {
+        feedback.style.display = 'none';
+        return;
+    }
+
+    const decoded = decodeTransferCode(clean);
+    if (!decoded) {
+        feedback.className = 'doveso-code-feedback error';
+        feedback.innerHTML = '❌ Dãy mã không hợp lệ hoặc bị sai ký tự!';
+        feedback.style.display = 'block';
+        return;
+    }
+
+    if (isCodeRedeemedInStorage(clean)) {
+        feedback.className = 'doveso-code-feedback error';
+        feedback.innerHTML = '⚠️ Mã này ĐÃ ĐƯỢC NẠP trước đó!';
+        feedback.style.display = 'block';
+        return;
+    }
+
+    let amountVnd = 0;
+    if (decoded.type === 1) {
+        amountVnd = decoded.amountUnit * 1000;
+    } else if (decoded.type === 2) {
+        amountVnd = Math.round((decoded.amountUnit / 100) * DOVESO_EXCHANGE_RATE);
+    }
+
+    const usdtEquiv = (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2);
+    feedback.className = 'doveso-code-feedback success';
+    feedback.innerHTML = `✅ Mã hợp lệ! Giá trị nạp: <strong>+${formatCurrency(amountVnd)}</strong> (≈ $${usdtEquiv} USDT từ WebCrypto)`;
+    feedback.style.display = 'block';
+}
+
+async function pasteDoVeSoCode() {
+    try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            const input = document.getElementById('input-doveso-code');
+            if (input && text) {
+                input.value = text.trim();
+                onDoVeSoCodeInput(input.value);
+            }
+        } else {
+            showToast('ℹ️', 'Vui lòng nhấn Ctrl+V để dán mã vào ô!', 'info');
+        }
+    } catch (e) {
+        showToast('ℹ️', 'Vui lòng nhấn Ctrl+V để dán mã vào ô!', 'info');
+    }
+}
+
+// Hàm quy đổi mã nạp tiền vào DoVeSo từ WebCrypto
+function redeemWebCryptoCodeInDoVeSo(codeStr) {
+    const decoded = decodeTransferCode(codeStr);
+    if (!decoded) {
+        if (typeof showToast === 'function') {
+            showToast('❌', 'Mã chuyển tiền không hợp lệ hoặc bị sai!', 'error');
+        } else {
+            alert('Mã chuyển tiền không hợp lệ hoặc bị sai!');
+        }
+        return false;
+    }
+
+    const redeemedList = JSON.parse(localStorage.getItem(TRANSFER_REDEEMED_KEY) || '[]');
+    if (redeemedList.some(item => (typeof item === 'string' ? item : item.code) === decoded.code)) {
+        if (typeof showToast === 'function') {
+            showToast('⚠️', 'Mã này ĐÃ ĐƯỢC NẠP trước đó rồi!', 'error');
+        } else {
+            alert('Mã này ĐÃ ĐƯỢC NẠP trước đó rồi!');
+        }
+        return false;
+    }
+
+    // Type 1: Từ WebCrypto sang DoVeSo (đơn vị: 1,000 VNĐ)
+    const amountVnd = decoded.type === 1 ? decoded.amountUnit * 1000 : decoded.amountUnit * 25480;
+    
+    // Cộng tiền vào số dư DoVeSo
+    state.balance = (state.balance || 0) + amountVnd;
+    saveState();
+    updateBalanceDisplay();
+    if (typeof updateStats === 'function') updateStats();
+
+    // Đánh dấu mã đã sử dụng
+    redeemedList.push({
+        code: decoded.code,
+        time: new Date().toISOString(),
+        amountVnd: amountVnd,
+        amountUsdt: (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2),
+        redeemedIn: 'DoVeSo'
+    });
+    localStorage.setItem(TRANSFER_REDEEMED_KEY, JSON.stringify(redeemedList));
+
+    if (transferSyncChannel) {
+        try {
+            transferSyncChannel.postMessage({ action: 'REDEEMED', code: decoded.code });
+        } catch (e) {}
+    }
+
+    // Lưu vào lịch sử giao dịch DoVeSo
+    const history = getDoVeSoTransferHistory();
+    history.unshift({
+        code: decoded.code,
+        formatted: `${decoded.code.slice(0, 4)}-${decoded.code.slice(4, 8)}-${decoded.code.slice(8, 12)}`,
+        direction: 'IN_FROM_WEBCRYPTO',
+        amountVnd: amountVnd,
+        createdAt: new Date().toISOString(),
+        status: 'SUCCESS'
+    });
+    saveDoVeSoTransferHistory(history);
+    renderDoVeSoTransferHistory();
+    if (typeof renderTabpageHistory === 'function') renderTabpageHistory();
+
+    // Hiệu ứng pháo hoa & thông báo thành công
+    if (typeof triggerConfetti === 'function') triggerConfetti();
+    if (typeof showToast === 'function') {
+        showToast('🎉', `Nạp tiền thành công! Đã cộng +${formatCurrency(amountVnd)} từ WebCrypto vào số dư!`, 'success');
+    }
+    alert(`🎉 Nạp tiền thành công! Đã cộng +${amountVnd.toLocaleString('vi-VN')}₫ từ WebCrypto vào số dư DoVeSo!`);
+    return true;
+}
+window.redeemWebCryptoCodeInDoVeSo = redeemWebCryptoCodeInDoVeSo;
+
+// Execute Redeem in DoVeSo
+function executeRedeemInDoVeSo() {
+    const input = document.getElementById('input-doveso-code');
+    if (!input) return;
+
+    const val = input.value;
+    const clean = val.replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/gi, '').toUpperCase();
+    if (clean.length !== 12) {
+        showToast('⚠️', 'Vui lòng nhập đúng dãy mã 12 ký tự chữ và số!', 'error');
+        return;
+    }
+
+    const success = redeemWebCryptoCodeInDoVeSo(clean);
+    if (success) {
+        input.value = '';
+        const feedback = document.getElementById('doveso-code-feedback');
+        if (feedback) feedback.style.display = 'none';
+        setTimeout(() => {
+            closeCryptoTransferModal();
+        }, 1800);
+    }
+}
+
+// Calculate USDT preview for outgoing transfer
+function onDoVeSoOutAmountChange(val) {
+    const prev = document.getElementById('doveso-out-usdt-preview');
+    if (!prev) return;
+    const num = parseInt(val);
+    if (isNaN(num) || num <= 0) {
+        prev.textContent = '$0.00 USDT';
+        return;
+    }
+    const usdt = (num / DOVESO_EXCHANGE_RATE).toFixed(2);
+    prev.textContent = `$${usdt} USDT`;
+}
+
+function setDoVeSoOutPreset(vnd) {
+    const input = document.getElementById('input-doveso-out-amount');
+    if (input) {
+        input.value = vnd;
+        onDoVeSoOutAmountChange(vnd);
+    }
+}
+
+// Generate 12-char code to transfer money back to WebCrypto
+function executeCreateCodeFromDoVeSo() {
+    const input = document.getElementById('input-doveso-out-amount');
+    if (!input) return;
+
+    const amountVnd = parseInt(input.value);
+    if (isNaN(amountVnd) || amountVnd < 25000) {
+        showToast('⚠️', 'Số tiền chuyển về WebCrypto tối thiểu là 25,000đ (≈ $1 USDT)!', 'error');
+        return;
+    }
+
+    if (amountVnd > state.balance) {
+        showToast('❌', `Số dư không đủ! Bạn có ${formatCurrency(state.balance)}, cần ${formatCurrency(amountVnd)}`, 'error');
+        return;
+    }
+
+    // Deduct from DoVeSo balance
+    state.balance -= amountVnd;
+    saveState();
+    updateBalanceDisplay();
+    updateStats();
+
+    // Convert to USDT cents for Type 2 code
+    const usdtCents = Math.round((amountVnd / DOVESO_EXCHANGE_RATE) * 100);
+    const rawCode = encodeTransferCode(2, usdtCents);
+    const formattedCode = `${rawCode.slice(0, 4)}-${rawCode.slice(4, 8)}-${rawCode.slice(8, 12)}`;
+    currentActiveDoVeSoCode = formattedCode;
+
+    // Record in history
+    const history = getDoVeSoTransferHistory();
+    history.unshift({
+        code: rawCode,
+        formatted: formattedCode,
+        direction: 'OUT_TO_WEBCRYPTO',
+        amountVnd: amountVnd,
+        amountUsdt: (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2),
+        createdAt: new Date().toISOString(),
+        status: 'PENDING'
+    });
+    saveDoVeSoTransferHistory(history);
+
+    // Show output card
+    const card = document.getElementById('doveso-out-card');
+    const codeEl = document.getElementById('doveso-generated-code');
+    const copyBtn = document.getElementById('btn-copy-doveso');
+
+    if (codeEl) codeEl.textContent = formattedCode;
+    if (copyBtn) {
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = '📋 Sao Chép Mã 12 Ký Tự';
+    }
+    if (card) {
+        card.style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Refresh UI
+    refreshDoVeSoTransferUI();
+    showToast('🔑', `Đã tạo mã 12 ký tự thành công! Đã trừ ${formatCurrency(amountVnd)} từ số dư.`, 'success');
+}
+
+// Copy DoVeSo generated code
+function copyDoVeSoGeneratedCode() {
+    if (!currentActiveDoVeSoCode) {
+        showToast('⚠️', 'Chưa có mã để sao chép!', 'error');
+        return;
+    }
+
+    const toCopy = currentActiveDoVeSoCode;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(toCopy).then(() => {
+            onDoVeSoCopySuccess();
+        }).catch(() => {
+            fallbackDoVeSoCopy(toCopy);
+        });
+    } else {
+        fallbackDoVeSoCopy(toCopy);
+    }
+}
+
+function onDoVeSoCopySuccess() {
+    const copyBtn = document.getElementById('btn-copy-doveso');
+    if (copyBtn) {
+        copyBtn.classList.add('copied');
+        copyBtn.textContent = '✅ ĐÃ SAO CHÉP!';
+    }
+    showToast('📋', `Đã sao chép mã [${currentActiveDoVeSoCode}]! Hãy sang web WebCrypto để nạp tiền.`, 'success');
+
+    setTimeout(() => {
+        if (copyBtn) {
+            copyBtn.classList.remove('copied');
+            copyBtn.textContent = '📋 Sao Chép Mã 12 Ký Tự';
+        }
+    }, 4000);
+}
+
+function fallbackDoVeSoCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        document.execCommand('copy');
+        onDoVeSoCopySuccess();
+    } catch (e) {
+        showToast('⚠️', 'Không thể tự động sao chép, hãy chọn mã thủ công!', 'error');
+    }
+    document.body.removeChild(ta);
+}
+
+// Render transfer history in DoVeSo
+function renderDoVeSoTransferHistory() {
+    const listEl = document.getElementById('doveso-transfer-history-list');
+    if (!listEl) return;
+
+    const history = getDoVeSoTransferHistory();
+    if (history.length === 0) {
+        listEl.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Chưa có lịch sử giao dịch mã nào.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = history.map(item => {
+        const isRedeemed = isCodeRedeemedInStorage(item.code) || item.status === 'SUCCESS';
+        const statusBadge = isRedeemed
+            ? `<span class="doveso-hist-status success">✅ Đã nạp thành công</span>`
+            : `<span class="doveso-hist-status pending">⏳ Chưa sử dụng</span>`;
+
+        const isOut = item.direction === 'OUT_TO_WEBCRYPTO';
+        const dirLabel = isOut ? 'Chuyển về WebCrypto' : 'Nhận từ WebCrypto';
+        const sign = isOut ? '-' : '+';
+        const color = isOut ? '#F0B90B' : '#2ecc71';
+
+        const d = new Date(item.createdAt);
+        const timeStr = !isNaN(d.getTime()) ? d.toLocaleTimeString('vi-VN') + ' ' + d.toLocaleDateString('vi-VN') : '';
+
+        return `
+            <div class="doveso-hist-item">
+                <div>
+                    <div class="doveso-hist-code">${item.formatted || item.code}</div>
+                    <div class="doveso-hist-sub">${dirLabel} &bull; ${timeStr}</div>
+                </div>
+                <div>
+                    <div class="doveso-hist-amount" style="color: ${color};">${sign}${formatCurrency(item.amountVnd)}</div>
+                    ${statusBadge}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============ QUICK VOUCHER BANNER HANDLERS (ON BUY TAB) ============
+function onQuickDoVeSoCodeInput(val) {
+    const feedback = document.getElementById('quick-doveso-code-feedback');
+    if (!feedback) return;
+
+    const clean = val.replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/gi, '').toUpperCase();
+    if (clean.length < 12) {
+        feedback.style.display = 'none';
+        return;
+    }
+
+    const decoded = decodeTransferCode(clean);
+    if (!decoded) {
+        feedback.className = 'doveso-code-feedback error';
+        feedback.innerHTML = '❌ Dãy mã không hợp lệ hoặc bị sai ký tự!';
+        feedback.style.display = 'block';
+        return;
+    }
+
+    if (isCodeRedeemedInStorage(clean)) {
+        feedback.className = 'doveso-code-feedback error';
+        feedback.innerHTML = '⚠️ Mã này ĐÃ ĐƯỢC NẠP trước đó!';
+        feedback.style.display = 'block';
+        return;
+    }
+
+    let amountVnd = 0;
+    if (decoded.type === 1) {
+        amountVnd = decoded.amountUnit * 1000;
+    } else {
+        amountVnd = Math.round((decoded.amountUnit / 100) * DOVESO_EXCHANGE_RATE);
+    }
+
+    const usdtEquiv = (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2);
+    feedback.className = 'doveso-code-feedback success';
+    feedback.innerHTML = `✅ Mã hợp lệ! Giá trị nạp: <strong>+${formatCurrency(amountVnd)}</strong> (≈ $${usdtEquiv} USDT từ WebCrypto)`;
+    feedback.style.display = 'block';
+}
+
+async function pasteQuickDoVeSoCode() {
+    try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            const input = document.getElementById('input-quick-doveso-code');
+            if (input && text) {
+                input.value = text.trim();
+                onQuickDoVeSoCodeInput(input.value);
+            }
+        } else {
+            showToast('ℹ️', 'Vui lòng nhấn Ctrl+V để dán mã vào ô!', 'info');
+        }
+    } catch (e) {
+        showToast('ℹ️', 'Vui lòng nhấn Ctrl+V để dán mã vào ô!', 'info');
+    }
+}
+
+function executeQuickRedeemInDoVeSo() {
+    const input = document.getElementById('input-quick-doveso-code');
+    if (!input) return;
+
+    const val = input.value;
+    const clean = val.replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/gi, '').toUpperCase();
+    if (clean.length !== 12) {
+        showToast('⚠️', 'Vui lòng nhập đúng dãy mã 12 ký tự chữ và số!', 'error');
+        return;
+    }
+
+    const decoded = decodeTransferCode(clean);
+    if (!decoded) {
+        showToast('❌', 'Mã chuyển tiền không hợp lệ hoặc sai định dạng!', 'error');
+        return;
+    }
+
+    if (isCodeRedeemedInStorage(clean)) {
+        showToast('⚠️', 'Mã này đã được nạp trước đó rồi!', 'error');
+        return;
+    }
+
+    let amountVnd = 0;
+    if (decoded.type === 1) {
+        amountVnd = decoded.amountUnit * 1000;
+    } else {
+        amountVnd = Math.round((decoded.amountUnit / 100) * DOVESO_EXCHANGE_RATE);
+    }
+
+    if (amountVnd <= 0) {
+        showToast('❌', 'Mã không có giá trị nạp hợp lệ!', 'error');
+        return;
+    }
+
+    // Add to DoVeSo balance
+    state.balance = (state.balance || 0) + amountVnd;
+    saveState();
+    updateBalanceDisplay();
+    updateStats();
+
+    // Mark as redeemed
+    markCodeAsRedeemedInStorage(clean, {
+        redeemedIn: 'DoVeSo',
+        amountVnd: amountVnd,
+        amountUsdt: (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2)
+    });
+
+    // Save to history
+    const history = getDoVeSoTransferHistory();
+    history.unshift({
+        code: clean,
+        formatted: `${clean.slice(0, 4)}-${clean.slice(4, 8)}-${clean.slice(8, 12)}`,
+        direction: 'IN_FROM_WEBCRYPTO',
+        amountVnd: amountVnd,
+        createdAt: new Date().toISOString(),
+        status: 'SUCCESS'
+    });
+    saveDoVeSoTransferHistory(history);
+
+    // Reset input
+    input.value = '';
+    const feedback = document.getElementById('quick-doveso-code-feedback');
+    if (feedback) feedback.style.display = 'none';
+
+    // Celebration
+    triggerConfetti();
+    showToast('🎉', `Đã nạp thành công +${formatCurrency(amountVnd)} từ WebCrypto vào số dư! Số dư hiện tại: ${formatCurrency(state.balance)}`, 'success');
+}
+
+// Quick Card Tab Switcher
+function switchQuickCardTab(tab) {
+    const btnRedeem = document.getElementById('cq-tab-btn-redeem');
+    const btnCreate = document.getElementById('cq-tab-btn-create');
+    const panelRedeem = document.getElementById('cq-panel-redeem');
+    const panelCreate = document.getElementById('cq-panel-create');
+
+    if (btnRedeem) btnRedeem.classList.toggle('active', tab === 'redeem');
+    if (btnCreate) btnCreate.classList.toggle('active', tab === 'create');
+    if (panelRedeem) panelRedeem.style.display = tab === 'redeem' ? 'block' : 'none';
+    if (panelCreate) {
+        panelCreate.style.display = tab === 'create' ? 'block' : 'none';
+        const availBalEl = document.getElementById('cq-avail-bal');
+        if (availBalEl) availBalEl.textContent = formatCurrency(state.balance);
+    }
+}
+
+let currentActiveQuickCreateCode = "";
+
+function onQuickCreateAmountChange(val) {
+    const prev = document.getElementById('quick-create-usdt-preview');
+    if (!prev) return;
+    const num = parseInt(val);
+    if (isNaN(num) || num <= 0) {
+        prev.textContent = '$0.00 USDT';
+        return;
+    }
+    const usdt = (num / DOVESO_EXCHANGE_RATE).toFixed(2);
+    prev.textContent = `$${usdt} USDT`;
+}
+
+function setQuickCreatePreset(vnd) {
+    const input = document.getElementById('input-quick-create-amount');
+    if (input) {
+        input.value = vnd;
+        onQuickCreateAmountChange(vnd);
+    }
+}
+
+function executeQuickCreateCode() {
+    const input = document.getElementById('input-quick-create-amount');
+    if (!input) return;
+
+    const amountVnd = parseInt(input.value);
+    if (isNaN(amountVnd) || amountVnd < 25000) {
+        showToast('⚠️', 'Số tiền chuyển về WebCrypto tối thiểu là 25,000đ (≈ $1 USDT)!', 'error');
+        return;
+    }
+
+    if (amountVnd > state.balance) {
+        showToast('❌', `Số dư không đủ! Bạn có ${formatCurrency(state.balance)}, cần ${formatCurrency(amountVnd)}`, 'error');
+        return;
+    }
+
+    // Deduct balance
+    state.balance -= amountVnd;
+    saveState();
+    updateBalanceDisplay();
+    updateStats();
+
+    const usdtCents = Math.round((amountVnd / DOVESO_EXCHANGE_RATE) * 100);
+    const rawCode = encodeTransferCode(2, usdtCents);
+    const formattedCode = `${rawCode.slice(0, 4)}-${rawCode.slice(4, 8)}-${rawCode.slice(8, 12)}`;
+    currentActiveQuickCreateCode = formattedCode;
+
+    const history = getDoVeSoTransferHistory();
+    history.unshift({
+        code: rawCode,
+        formatted: formattedCode,
+        direction: 'OUT_TO_WEBCRYPTO',
+        amountVnd: amountVnd,
+        amountUsdt: (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2),
+        createdAt: new Date().toISOString(),
+        status: 'PENDING'
+    });
+    saveDoVeSoTransferHistory(history);
+
+    const resultBox = document.getElementById('quick-create-result-box');
+    const codeDisplay = document.getElementById('quick-create-code-display');
+    const copyBtn = document.getElementById('btn-copy-quick-create');
+    const availBalEl = document.getElementById('cq-avail-bal');
+
+    if (codeDisplay) codeDisplay.textContent = formattedCode;
+    if (availBalEl) availBalEl.textContent = formatCurrency(state.balance);
+    if (copyBtn) {
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = '📋 Sao Chép Mã 12 Ký Tự';
+    }
+    if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    showToast('🔑', `Đã tạo mã 12 ký tự thành công! Đã trừ ${formatCurrency(amountVnd)} từ số dư.`, 'success');
+}
+
+function copyQuickCreateCode() {
+    if (!currentActiveQuickCreateCode) {
+        showToast('⚠️', 'Chưa có mã để sao chép!', 'error');
+        return;
+    }
+
+    const toCopy = currentActiveQuickCreateCode;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(toCopy).then(() => {
+            const copyBtn = document.getElementById('btn-copy-quick-create');
+            if (copyBtn) {
+                copyBtn.classList.add('copied');
+                copyBtn.textContent = '✅ ĐÃ SAO CHÉP!';
+            }
+            showToast('📋', `Đã sao chép mã [${currentActiveQuickCreateCode}]! Hãy sang web WebCrypto để nạp tiền.`, 'success');
+            setTimeout(() => {
+                if (copyBtn) {
+                    copyBtn.classList.remove('copied');
+                    copyBtn.textContent = '📋 Sao Chép Mã 12 Ký Tự';
+                }
+            }, 4000);
+        }).catch(() => {
+            fallbackDoVeSoCopy(toCopy);
+        });
+    } else {
+        fallbackDoVeSoCopy(toCopy);
+    }
+}
+
+// ============ TAB 5 DEDICATED PAGE HANDLERS ============
+let currentActiveTabpageCode = "";
+
+function switchTabCryptoSub(sub) {
+    const subs = ['redeem', 'create', 'history'];
+    subs.forEach(s => {
+        const btn = document.getElementById(`tabpage-btn-${s}`);
+        const panel = document.getElementById(`tabpage-panel-${s}`);
+        if (btn) btn.classList.toggle('active', s === sub);
+        if (panel) {
+            panel.style.display = s === sub ? 'block' : 'none';
+        }
+    });
+
+    if (sub === 'history') {
+        renderTabpageHistory();
+    }
+}
+
+function refreshTabpageCryptoUI() {
+    const availEl = document.getElementById('tabpage-avail-text');
+    if (availEl) availEl.textContent = formatCurrency(state.balance);
+
+    const outInput = document.getElementById('input-tabpage-out-amount');
+    if (outInput) onTabpageOutAmountChange(outInput.value);
+
+    renderTabpageHistory();
+}
+
+function onTabpageCodeInput(val) {
+    const feedback = document.getElementById('tabpage-code-feedback');
+    if (!feedback) return;
+
+    const clean = val.replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/gi, '').toUpperCase();
+    if (clean.length < 12) {
+        feedback.style.display = 'none';
+        return;
+    }
+
+    const decoded = decodeTransferCode(clean);
+    if (!decoded) {
+        feedback.className = 'doveso-code-feedback error';
+        feedback.innerHTML = '❌ Dãy mã không hợp lệ hoặc bị sai ký tự!';
+        feedback.style.display = 'block';
+        return;
+    }
+
+    if (isCodeRedeemedInStorage(clean)) {
+        feedback.className = 'doveso-code-feedback error';
+        feedback.innerHTML = '⚠️ Mã này ĐÃ ĐƯỢC NẠP trước đó!';
+        feedback.style.display = 'block';
+        return;
+    }
+
+    let amountVnd = 0;
+    if (decoded.type === 1) {
+        amountVnd = decoded.amountUnit * 1000;
+    } else if (decoded.type === 2) {
+        amountVnd = Math.round((decoded.amountUnit / 100) * DOVESO_EXCHANGE_RATE);
+    }
+
+    const usdtEquiv = (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2);
+    feedback.className = 'doveso-code-feedback success';
+    feedback.innerHTML = `✅ Mã hợp lệ! Giá trị nạp: <strong>+${formatCurrency(amountVnd)}</strong> (≈ $${usdtEquiv} USDT từ WebCrypto)`;
+    feedback.style.display = 'block';
+}
+
+async function pasteTabpageCode() {
+    try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            const input = document.getElementById('input-tabpage-code');
+            if (input && text) {
+                input.value = text.trim();
+                onTabpageCodeInput(input.value);
+            }
+        } else {
+            showToast('ℹ️', 'Vui lòng nhấn Ctrl+V để dán mã vào ô!', 'info');
+        }
+    } catch (e) {
+        showToast('ℹ️', 'Vui lòng nhấn Ctrl+V để dán mã vào ô!', 'info');
+    }
+}
+
+function executeTabpageRedeem() {
+    const input = document.getElementById('input-tabpage-code');
+    if (!input) return;
+
+    const val = input.value;
+    const clean = val.replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ]/gi, '').toUpperCase();
+    if (clean.length !== 12) {
+        showToast('⚠️', 'Vui lòng nhập đúng dãy mã 12 ký tự chữ và số!', 'error');
+        return;
+    }
+
+    const decoded = decodeTransferCode(clean);
+    if (!decoded) {
+        showToast('❌', 'Mã chuyển tiền không hợp lệ hoặc sai định dạng!', 'error');
+        return;
+    }
+
+    if (isCodeRedeemedInStorage(clean)) {
+        showToast('⚠️', 'Mã này đã được nạp trước đó rồi!', 'error');
+        return;
+    }
+
+    let amountVnd = 0;
+    if (decoded.type === 1) {
+        amountVnd = decoded.amountUnit * 1000;
+    } else {
+        amountVnd = Math.round((decoded.amountUnit / 100) * DOVESO_EXCHANGE_RATE);
+    }
+
+    if (amountVnd <= 0) {
+        showToast('❌', 'Mã không có giá trị nạp hợp lệ!', 'error');
+        return;
+    }
+
+    state.balance = (state.balance || 0) + amountVnd;
+    saveState();
+    updateBalanceDisplay();
+    updateStats();
+
+    markCodeAsRedeemedInStorage(clean, {
+        redeemedIn: 'DoVeSo',
+        amountVnd: amountVnd,
+        amountUsdt: (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2)
+    });
+
+    const history = getDoVeSoTransferHistory();
+    history.unshift({
+        code: clean,
+        formatted: `${clean.slice(0, 4)}-${clean.slice(4, 8)}-${clean.slice(8, 12)}`,
+        direction: 'IN_FROM_WEBCRYPTO',
+        amountVnd: amountVnd,
+        createdAt: new Date().toISOString(),
+        status: 'SUCCESS'
+    });
+    saveDoVeSoTransferHistory(history);
+
+    input.value = '';
+    const feedback = document.getElementById('tabpage-code-feedback');
+    if (feedback) feedback.style.display = 'none';
+
+    triggerConfetti();
+    showToast('🎉', `Đã nạp thành công +${formatCurrency(amountVnd)} từ WebCrypto vào số dư!`, 'success');
+    refreshTabpageCryptoUI();
+}
+
+function onTabpageOutAmountChange(val) {
+    const prev = document.getElementById('tabpage-out-usdt-preview');
+    if (!prev) return;
+    const num = parseInt(val);
+    if (isNaN(num) || num <= 0) {
+        prev.textContent = '$0.00 USDT';
+        return;
+    }
+    const usdt = (num / DOVESO_EXCHANGE_RATE).toFixed(2);
+    prev.textContent = `$${usdt} USDT`;
+}
+
+function setTabpageOutPreset(vnd) {
+    const input = document.getElementById('input-tabpage-out-amount');
+    if (input) {
+        input.value = vnd;
+        onTabpageOutAmountChange(vnd);
+    }
+}
+
+function executeTabpageCreateCode() {
+    const input = document.getElementById('input-tabpage-out-amount');
+    if (!input) return;
+
+    const amountVnd = parseInt(input.value);
+    if (isNaN(amountVnd) || amountVnd < 25000) {
+        showToast('⚠️', 'Số tiền chuyển về WebCrypto tối thiểu là 25,000đ (≈ $1 USDT)!', 'error');
+        return;
+    }
+
+    if (amountVnd > state.balance) {
+        showToast('❌', `Số dư không đủ! Bạn có ${formatCurrency(state.balance)}, cần ${formatCurrency(amountVnd)}`, 'error');
+        return;
+    }
+
+    state.balance -= amountVnd;
+    saveState();
+    updateBalanceDisplay();
+    updateStats();
+
+    const usdtCents = Math.round((amountVnd / DOVESO_EXCHANGE_RATE) * 100);
+    const rawCode = encodeTransferCode(2, usdtCents);
+    const formattedCode = `${rawCode.slice(0, 4)}-${rawCode.slice(4, 8)}-${rawCode.slice(8, 12)}`;
+    currentActiveTabpageCode = formattedCode;
+
+    const history = getDoVeSoTransferHistory();
+    history.unshift({
+        code: rawCode,
+        formatted: formattedCode,
+        direction: 'OUT_TO_WEBCRYPTO',
+        amountVnd: amountVnd,
+        amountUsdt: (amountVnd / DOVESO_EXCHANGE_RATE).toFixed(2),
+        createdAt: new Date().toISOString(),
+        status: 'PENDING'
+    });
+    saveDoVeSoTransferHistory(history);
+
+    const card = document.getElementById('tabpage-out-card');
+    const codeEl = document.getElementById('tabpage-generated-code');
+    const copyBtn = document.getElementById('btn-copy-tabpage-code');
+
+    if (codeEl) codeEl.textContent = formattedCode;
+    if (copyBtn) {
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = '📋 Sao Chép Mã 12 Ký Tự';
+    }
+    if (card) {
+        card.style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    refreshTabpageCryptoUI();
+    showToast('🔑', `Đã tạo mã 12 ký tự thành công! Đã trừ ${formatCurrency(amountVnd)} từ số dư.`, 'success');
+}
+
+function copyTabpageGeneratedCode() {
+    if (!currentActiveTabpageCode) {
+        showToast('⚠️', 'Chưa có mã để sao chép!', 'error');
+        return;
+    }
+
+    const toCopy = currentActiveTabpageCode;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(toCopy).then(() => {
+            const copyBtn = document.getElementById('btn-copy-tabpage-code');
+            if (copyBtn) {
+                copyBtn.classList.add('copied');
+                copyBtn.textContent = '✅ ĐÃ SAO CHÉP!';
+            }
+            showToast('📋', `Đã sao chép mã [${currentActiveTabpageCode}]!`, 'success');
+            setTimeout(() => {
+                if (copyBtn) {
+                    copyBtn.classList.remove('copied');
+                    copyBtn.textContent = '📋 Sao Chép Mã 12 Ký Tự';
+                }
+            }, 4000);
+        }).catch(() => {
+            fallbackDoVeSoCopy(toCopy);
+        });
+    } else {
+        fallbackDoVeSoCopy(toCopy);
+    }
+}
+
+function renderTabpageHistory() {
+    const listEl = document.getElementById('tabpage-transfer-history-list');
+    if (!listEl) return;
+
+    const history = getDoVeSoTransferHistory();
+    if (history.length === 0) {
+        listEl.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Chưa có lịch sử giao dịch mã nào.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = history.map(item => {
+        const isRedeemed = isCodeRedeemedInStorage(item.code) || item.status === 'SUCCESS';
+        const statusBadge = isRedeemed
+            ? `<span class="doveso-hist-status success">✅ Đã nạp thành công</span>`
+            : `<span class="doveso-hist-status pending">⏳ Chưa sử dụng</span>`;
+
+        const isOut = item.direction === 'OUT_TO_WEBCRYPTO';
+        const dirLabel = isOut ? 'Chuyển về WebCrypto' : 'Nhận từ WebCrypto';
+        const sign = isOut ? '-' : '+';
+        const color = isOut ? '#F0B90B' : '#2ecc71';
+
+        const d = new Date(item.createdAt);
+        const timeStr = !isNaN(d.getTime()) ? d.toLocaleTimeString('vi-VN') + ' ' + d.toLocaleDateString('vi-VN') : '';
+
+        return `
+            <div class="doveso-hist-item">
+                <div>
+                    <div class="doveso-hist-code">${item.formatted || item.code}</div>
+                    <div class="doveso-hist-sub">${dirLabel} &bull; ${timeStr}</div>
+                </div>
+                <div>
+                    <div class="doveso-hist-amount" style="color: ${color};">${sign}${formatCurrency(item.amountVnd)}</div>
+                    ${statusBadge}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+

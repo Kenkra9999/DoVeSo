@@ -24,7 +24,10 @@
 - 📊 **Thống kê & Quản lý số dư chuẩn xác:**
   - Bảng tổng kết chi tiết từng hạng giải trúng được, số vé trúng, số vé trượt và tổng tiền thưởng.
   - Quản lý số dư chuẩn xác, cộng dồn khi nạp, chặn giao dịch khi không đủ tiền và tự động nhận tiền thưởng trúng số.
-  - Tra cứu số vé nhanh với các kỳ quay trong lịch sử.
+- 💸 **Liên kết & Chuyển tiền Đa nền tảng (WebCrypto <-> DoVeSo):**
+  - Tích hợp cổng quy đổi mã chuyển tiền 12 ký tự mã hóa mật mã học (Base32 + 64-bit LCG bit diffusion + 10-bit Checksum).
+  - Tự động nạp tiền khi mở link qua URL `?code=XXXX-XXXX-XXXX` hoặc `?transfer_code=XXXX-XXXX-XXXX`.
+  - Hỗ trợ hàm `redeemWebCryptoCodeInDoVeSo(code)` quy đổi trực tiếp từ WebCrypto sang số dư DoVeSo.
 
 ---
 
@@ -42,3 +45,4 @@ Bạn có thể mở trực tiếp file `index.html` trên trình duyệt hoặc
 - **HTML5** & **Semantic Web**
 - **Vanilla CSS3** (Glassmorphism, Animations, Dark Mode Luxury Theme)
 - **Modern JavaScript (ES6+)** & **IndexedDB**
+

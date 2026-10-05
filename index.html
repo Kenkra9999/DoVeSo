@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4.1.0">
+    <link rel="stylesheet" href="style.css?v=6.0.0">
 </head>
 <body>
     <!-- Floating Particles Background -->
@@ -40,6 +40,12 @@
                 <button class="btn-deposit" id="btn-deposit" onclick="openDepositModal()">
                     <span class="deposit-icon">💰</span> Nạp Tiền
                 </button>
+                <button class="btn-crypto-link" id="btn-crypto-link" onclick="openCryptoTransferModal('receive')" title="Mã nhận tiền tự động 5 phút từ WebCrypto">
+                    <span class="crypto-icon">📥</span> Nhận Tiền Crypto (5 Phút)
+                </button>
+                <button class="btn-crypto-create" id="btn-crypto-create" onclick="openCryptoTransferModal('create')" title="Tạo mã 12 ký tự để chuyển tiền sang WebCrypto">
+                    <span class="crypto-icon">📤</span> Chuyển Sang WebCrypto
+                </button>
             </div>
         </div>
     </header>
@@ -65,6 +71,11 @@
                 <span class="tab-label">Vé Của Tôi</span>
                 <span class="tab-badge" id="badge-tickets-pending" style="display:none;">0</span>
             </button>
+            <button class="tab-btn tab-btn-crypto" data-tab="crypto" onclick="switchTab('crypto')">
+                <span class="tab-icon">⚡</span>
+                <span class="tab-label">Mã WebCrypto</span>
+                <span class="tab-badge-new">12 SỐ</span>
+            </button>
         </div>
     </nav>
 
@@ -73,6 +84,174 @@
 
         <!-- ===== MUA VÉ TAB ===== -->
         <section class="tab-content active" id="tab-buy">
+            <!-- Quick Transfer Box (WebCrypto <-> DoVeSo) - ALWAYS VISIBLE BOTH SECTIONS -->
+            <div class="card crypto-dual-card">
+                <div class="dual-card-header">
+                    <div class="dual-card-title">
+                        <span class="d-icon">⚡</span>
+                        <div>
+                            <h3>CỔNG CHUYỂN TIỀN LIÊN KẾT (WEBCRYPTO ⇄ DOVESO)</h3>
+                            <p>Chuyển tiền 2 chiều tự động • Tự tạo mã hiệu lực 5 phút • Tỷ giá: 1 USDT = 25,480 VNĐ • <a href="https://github.com/Kenkra9999/MainCryptoWeb" target="_blank" rel="noopener noreferrer" class="crypto-repo-link">WebCrypto GitHub ↗</a></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dual-card-grid">
+                    <!-- SECTION 1: AUTO-GENERATED 5-MIN RECEIVE CODE FROM WEBCRYPTO -->
+                    <div class="dual-box dual-box-redeem">
+                        <div class="dual-box-header">
+                            <div class="box-badge-row">
+                                <span class="box-badge badge-gold">📥 1. NHẬN TIỀN TỪ WEBCRYPTO</span>
+                                <span class="crypto-timer-pill" id="quick-receive-timer-pill">
+                                    <span class="timer-dot"></span>
+                                    <span class="timer-label">Hiệu lực:</span>
+                                    <strong id="quick-receive-timer">05:00</strong>
+                                </span>
+                            </div>
+                            <h4>Mã Nhận Tiền Tự Động (5 Phút)</h4>
+                            <p>Hệ thống tự tạo mã nhận tiền có thời hạn 5 phút. Sao chép mã hoặc bấm chuyển sang WebCrypto để nhận tiền ngay!</p>
+                        </div>
+
+                        <div class="dual-box-body">
+                            <!-- Amount Selector Chips -->
+                            <div class="receive-amount-selector">
+                                <div class="ras-header">
+                                    <span class="ras-label">Chọn số tiền muốn nhận:</span>
+                                    <span class="ras-usdt" id="quick-receive-usdt-label">≈ $7.85 USDT</span>
+                                </div>
+                                <div class="preset-chips preset-chips-receive">
+                                    <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(50000)">50k</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(100000)">100k</button>
+                                    <button type="button" class="btn-preset-mini active" id="chip-rcv-200k" onclick="setReceiveAmount(200000)">200k</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(500000)">500k</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(1000000)">1M</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(2000000)">2M</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(5000000)">5M</button>
+                                </div>
+                                <div class="custom-input-group custom-input-group-sm" style="margin-top: 6px;">
+                                    <input type="number" id="input-receive-custom-amount" placeholder="Hoặc nhập số tiền VNĐ khác (tối thiểu 10,000đ)..." min="10000" step="10000" oninput="onReceiveCustomAmountChange(this.value)">
+                                    <button type="button" class="btn-apply-amount" onclick="applyCustomReceiveAmount()">Áp Dụng</button>
+                                </div>
+                            </div>
+
+                            <!-- Receive Code Display Box -->
+                            <div class="doveso-receive-card" id="quick-receive-card">
+                                <div class="rc-header">
+                                    <span class="rc-tag">🔑 MÃ NHẬN TIỀN CỦA BẠN:</span>
+                                    <span class="rc-amount-badge" id="quick-receive-amount-badge">+200,000đ</span>
+                                </div>
+                                
+                                <div class="rc-code-wrap">
+                                    <div class="rc-code-text font-mono" id="quick-receive-code-display">XXXX-XXXX-XXXX</div>
+                                    <button type="button" class="btn-rc-refresh" onclick="refreshQuickReceiveCode()" title="Làm mới mã & tạo lại 5 phút">
+                                        🔄 Đổi Mã
+                                    </button>
+                                </div>
+
+                                <!-- 5-minute countdown progress bar -->
+                                <div class="timer-progress-wrap">
+                                    <div class="timer-progress-bar" id="quick-receive-progress-bar" style="width: 100%;"></div>
+                                </div>
+                                <div class="timer-status-text" id="quick-receive-status-text">
+                                    ⏱️ Mã có hiệu lực trong 5 phút. Hãy sao chép hoặc chuyển sang WebCrypto thanh toán.
+                                </div>
+
+                                <!-- Action Buttons: Copy, Go to Crypto, Instant Pay -->
+                                <div class="rc-actions-grid">
+                                    <button type="button" class="btn-rc-action btn-rc-copy" id="btn-copy-quick-receive" onclick="copyQuickReceiveCode()">
+                                        📋 Sao Chép Mã
+                                    </button>
+                                    <button type="button" class="btn-rc-action btn-rc-pay" onclick="openWebCryptoToPay('quick')">
+                                        🚀 Chuyển Sang WebCrypto
+                                    </button>
+                                </div>
+                                
+                                <button type="button" class="btn-rc-instant" onclick="executeInstantCryptoPay('quick')">
+                                    ⚡ Nạp Nhanh Trực Tiếp (Tự Trừ Sàn Crypto & Cộng DoVeSo)
+                                </button>
+                            </div>
+
+                            <!-- Manual Paste Accordion Toggle -->
+                            <div class="manual-paste-toggle-wrap">
+                                <button type="button" class="btn-manual-toggle" onclick="toggleQuickManualPaste()">
+                                    <span id="quick-paste-toggle-icon">▸</span> Hoặc dán mã 12 ký tự đã có từ WebCrypto
+                                </button>
+                                <div class="manual-paste-box" id="quick-manual-paste-box" style="display: none;">
+                                    <div class="crypto-code-input-wrap">
+                                        <input type="text" id="input-quick-doveso-code" placeholder="VD: 92PQ-U4HQ-NVVS" maxlength="14" oninput="onQuickDoVeSoCodeInput(this.value)">
+                                        <button type="button" class="btn-paste-code" onclick="pasteQuickDoVeSoCode()">📋 Dán</button>
+                                    </div>
+                                    <div id="quick-doveso-code-feedback" class="doveso-code-feedback" style="display: none; margin-top: 8px;"></div>
+                                    <button class="btn-quick-redeem-action" style="width: 100%; margin-top: 10px;" onclick="executeQuickRedeemInDoVeSo()">
+                                        💰 Nạp Mã Này Vào Số Dư
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: CREATE CODE TO TRANSFER TO WEBCRYPTO (WITH 5-MIN TIMER & COPY) -->
+                    <div class="dual-box dual-box-create">
+                        <div class="dual-box-header">
+                            <span class="box-badge badge-green">🔑 2. CHUYỂN TIỀN SANG WEBCRYPTO</span>
+                            <h4>Tạo Dãy Mã 12 Ký Tự Rút Tiền</h4>
+                            <p>Trích số dư xổ số để tạo mã 12 ký tự quy đổi thành USDT nạp sang web <strong>WebCrypto</strong>.</p>
+                            <div class="dual-avail-bal">
+                                Số dư hiện tại: <strong class="text-green" id="cq-avail-bal">500,000đ</strong>
+                            </div>
+                        </div>
+                        <div class="dual-box-body">
+                            <div class="custom-input-group" style="width: 100%;">
+                                <input type="number" id="input-quick-create-amount" placeholder="Nhập số VNĐ (tối thiểu 25,000đ)..." min="25000" step="1000" oninput="onQuickCreateAmountChange(this.value)">
+                                <button type="button" class="btn-deposit-confirm" style="white-space: nowrap;" onclick="executeQuickCreateCode()">
+                                    🔑 Tạo Mã Rút Tiền
+                                </button>
+                            </div>
+                            <div class="quick-preset-row">
+                                <span>Quy đổi USDT: <strong id="quick-create-usdt-preview" style="color: #F0B90B;">$0.00 USDT</strong></span>
+                                <div class="preset-chips">
+                                    <button type="button" class="btn-preset-mini" onclick="setQuickCreatePreset(100000)">100k</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setQuickCreatePreset(500000)">500k</button>
+                                    <button type="button" class="btn-preset-mini" onclick="setQuickCreatePreset(1000000)">1M</button>
+                                </div>
+                            </div>
+
+                            <!-- Output Card if generated on quick card -->
+                            <div id="quick-create-result-box" class="doveso-out-card" style="display: none; margin-top: 10px;">
+                                <div class="out-header-row">
+                                    <span class="out-badge">✅ ĐÃ TẠO MÃ RÚT TIỀN THÀNH CÔNG</span>
+                                    <span class="crypto-timer-pill" id="quick-create-timer-pill">
+                                        <span class="timer-dot"></span>
+                                        <span class="timer-label">Hiệu lực:</span>
+                                        <strong id="quick-create-timer">05:00</strong>
+                                    </span>
+                                </div>
+                                <div class="out-code-text" id="quick-create-code-display">XXXX-XXXX-XXXX</div>
+                                
+                                <!-- Progress bar for 5-minute expiry -->
+                                <div class="timer-progress-wrap">
+                                    <div class="timer-progress-bar" id="quick-create-progress-bar" style="width: 100%;"></div>
+                                </div>
+
+                                <div class="rc-actions-grid" style="margin-top: 10px;">
+                                    <button class="btn-copy-doveso" id="btn-copy-quick-create" onclick="copyQuickCreateCode()">
+                                        📋 Sao Chép Mã
+                                    </button>
+                                    <button class="btn-rc-action btn-rc-pay" onclick="openWebCryptoToRedeem('quick')">
+                                        🚀 Mở WebCrypto & Nạp
+                                    </button>
+                                </div>
+
+                                <button type="button" class="btn-cancel-refund" onclick="cancelQuickOutCode()" title="Hủy mã và hoàn tiền lại vào số dư DoVeSo">
+                                    ↩️ Hủy Mã & Hoàn Lại Tiền
+                                </button>
+                                <p class="out-sub">Sao chép mã này hoặc bấm "Mở WebCrypto & Nạp" để cộng USDT vào tài khoản sàn WebCrypto!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="section-header">
                 <h2>🎫 Mua Vé Số</h2>
                 <p>Chọn số may mắn của bạn - Mỗi vé <strong>10,000đ</strong></p>
@@ -432,6 +611,191 @@
             </div>
         </section>
 
+        <!-- ===== TAB 5: WEBCRYPTO TRANSFER & REDEEM TAB ===== -->
+        <section class="tab-content" id="tab-crypto">
+            <div class="section-header">
+                <h2>⚡ Liên Kết & Chuyển Tiền WebCrypto</h2>
+                <p>Nạp tiền hoặc rút tiền giữa <strong>Xổ Số Kiến Thiết (DoVeSo)</strong> và <strong>Sàn WebCrypto</strong> qua dãy mã 12 ký tự.</p>
+            </div>
+
+            <div class="card" style="max-width: 760px; margin: 0 auto;">
+                <div class="crypto-transfer-tabs" style="border-radius: var(--radius-sm); margin-bottom: 20px;">
+                    <button class="crypto-tab-btn active" id="tabpage-btn-redeem" onclick="switchTabCryptoSub('redeem')">
+                        📥 Nhận Tiền Từ WebCrypto (5 Phút)
+                    </button>
+                    <button class="crypto-tab-btn" id="tabpage-btn-create" onclick="switchTabCryptoSub('create')">
+                        📤 Chuyển Sang WebCrypto
+                    </button>
+                    <button class="crypto-tab-btn" id="tabpage-btn-history" onclick="switchTabCryptoSub('history')">
+                        📜 Lịch Sử Giao Dịch
+                    </button>
+                </div>
+
+                <!-- SUB 1: RECEIVE CODE WITH 5-MINUTE COUNTDOWN -->
+                <div id="tabpage-panel-redeem">
+                    <div class="crypto-info-alert">
+                        <span class="alert-icon">⚡</span>
+                        <span>Hệ thống tự động tạo mã nhận tiền có thời hạn <strong>5 phút</strong>. Sao chép mã hoặc bấm chuyển sang WebCrypto để nhận tiền nạp vào số dư tài khoản Xổ Số ngay tức thì!</span>
+                    </div>
+
+                    <!-- Amount Selector Chips -->
+                    <div class="receive-amount-selector" style="margin-bottom: 16px;">
+                        <div class="ras-header">
+                            <span class="ras-label">Chọn số tiền muốn nhận từ WebCrypto:</span>
+                            <span class="ras-usdt" id="tabpage-receive-usdt-label">≈ $7.85 USDT</span>
+                        </div>
+                        <div class="preset-chips preset-chips-receive">
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(50000)">50k</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(100000)">100k</button>
+                            <button type="button" class="btn-preset-mini active" id="tabpage-chip-rcv-200k" onclick="setReceiveAmount(200000)">200k</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(500000)">500k</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(1000000)">1 Triệu</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(2000000)">2 Triệu</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(5000000)">5 Triệu</button>
+                        </div>
+                        <div class="custom-input-group custom-input-group-sm" style="margin-top: 8px;">
+                            <input type="number" id="input-tabpage-receive-custom-amount" placeholder="Hoặc nhập số tiền VNĐ khác (tối thiểu 10,000đ)..." min="10000" step="10000" oninput="onTabpageReceiveCustomChange(this.value)">
+                            <button type="button" class="btn-apply-amount" onclick="applyTabpageCustomReceive()">Áp Dụng</button>
+                        </div>
+                    </div>
+
+                    <!-- Receive Code Display Card -->
+                    <div class="doveso-receive-card" id="tabpage-receive-card">
+                        <div class="rc-header">
+                            <div class="rc-tag-row">
+                                <span class="rc-tag">🔑 MÃ NHẬN TIỀN CỦA BẠN:</span>
+                                <span class="crypto-timer-pill" id="tabpage-receive-timer-pill">
+                                    <span class="timer-dot"></span>
+                                    <span class="timer-label">Hiệu lực:</span>
+                                    <strong id="tabpage-receive-timer">05:00</strong>
+                                </span>
+                            </div>
+                            <span class="rc-amount-badge" id="tabpage-receive-amount-badge">+200,000đ</span>
+                        </div>
+                        
+                        <div class="rc-code-wrap">
+                            <div class="rc-code-text font-mono" id="tabpage-receive-code-display">XXXX-XXXX-XXXX</div>
+                            <button type="button" class="btn-rc-refresh" onclick="refreshQuickReceiveCode()" title="Làm mới mã & tạo lại 5 phút">
+                                🔄 Đổi Mã Mới
+                            </button>
+                        </div>
+
+                        <!-- 5-minute countdown progress bar -->
+                        <div class="timer-progress-wrap">
+                            <div class="timer-progress-bar" id="tabpage-receive-progress-bar" style="width: 100%;"></div>
+                        </div>
+                        <div class="timer-status-text" id="tabpage-receive-status-text">
+                            ⏱️ Mã có hiệu lực trong 5 phút. Hãy sao chép hoặc chuyển sang WebCrypto thanh toán.
+                        </div>
+
+                        <!-- Action Buttons: Copy, Go to Crypto, Instant Pay -->
+                        <div class="rc-actions-grid">
+                            <button type="button" class="btn-rc-action btn-rc-copy" id="btn-copy-tabpage-receive" onclick="copyQuickReceiveCode()">
+                                📋 Sao Chép Mã Nhận Tiền
+                            </button>
+                            <button type="button" class="btn-rc-action btn-rc-pay" onclick="openWebCryptoToPay('tabpage')">
+                                🚀 Chuyển Sang WebCrypto Thanh Toán
+                            </button>
+                        </div>
+                        
+                        <button type="button" class="btn-rc-instant" onclick="executeInstantCryptoPay('tabpage')">
+                            ⚡ Nạp Nhanh Trực Tiếp (Tự Trừ Sàn Crypto & Cộng DoVeSo)
+                        </button>
+                    </div>
+
+                    <!-- Manual Paste Accordion Toggle -->
+                    <div class="manual-paste-toggle-wrap">
+                        <button type="button" class="btn-manual-toggle" onclick="toggleTabpageManualPaste()">
+                            <span id="tabpage-paste-toggle-icon">▸</span> Hoặc dán mã 12 ký tự đã có từ WebCrypto
+                        </button>
+                        <div class="manual-paste-box" id="tabpage-manual-paste-box" style="display: none;">
+                            <div class="crypto-code-input-wrap">
+                                <input type="text" id="input-tabpage-code" placeholder="VD: 92PQ-U4HQ-NVVS" maxlength="14" oninput="onTabpageCodeInput(this.value)">
+                                <button type="button" class="btn-paste-code" onclick="pasteTabpageCode()">📋 Dán</button>
+                            </div>
+                            <div id="tabpage-code-feedback" class="doveso-code-feedback" style="display: none; margin-top: 8px;"></div>
+                            <button class="btn-confirm-redeem" style="margin-top: 10px;" onclick="executeTabpageRedeem()">
+                                💰 Xác Nhận Nạp Tiền Vào Số Dư
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUB 2: CREATE TRANSFER CODE TO WEBCRYPTO -->
+                <div id="tabpage-panel-create" style="display: none;">
+                    <div class="crypto-info-alert">
+                        <span class="alert-icon">🔄</span>
+                        <span>Trích số dư xổ số để tạo mã <strong>12 ký tự</strong> quy đổi thành USDT nạp vào sàn <strong>WebCrypto</strong>. Mã có hiệu lực trong 5 phút.</span>
+                    </div>
+
+                    <div class="crypto-avail-badge">
+                        <span>Số dư hiện có:</span>
+                        <strong id="tabpage-avail-text">500,000đ</strong>
+                    </div>
+
+                    <div class="crypto-input-block">
+                        <label for="input-tabpage-out-amount">Số tiền muốn chuyển về WebCrypto (VNĐ):</label>
+                        <div class="custom-input-group">
+                            <input type="number" id="input-tabpage-out-amount" placeholder="VD: 254800 (tối thiểu 25,000đ)" min="25000" step="1000" oninput="onTabpageOutAmountChange(this.value)">
+                        </div>
+                        <div class="crypto-calc-sub">
+                            <span>Quy đổi nhận được ở WebCrypto:</span>
+                            <strong id="tabpage-out-usdt-preview" style="color: #F0B90B;">$0.00 USDT</strong>
+                        </div>
+                    </div>
+
+                    <div class="deposit-options" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 12px;">
+                        <button type="button" class="deposit-btn" onclick="setTabpageOutPreset(100000)">100k</button>
+                        <button type="button" class="deposit-btn" onclick="setTabpageOutPreset(500000)">500k</button>
+                        <button type="button" class="deposit-btn" onclick="setTabpageOutPreset(1000000)">1 Triệu</button>
+                    </div>
+
+                    <button class="btn-confirm-redeem" onclick="executeTabpageCreateCode()">
+                        🔑 Tạo Mã 12 Ký Tự Rút Tiền
+                    </button>
+
+                    <div class="doveso-out-card" id="tabpage-out-card" style="display: none;">
+                        <div class="out-header-row">
+                            <span class="out-badge">✅ ĐÃ TẠO MÃ RÚT TIỀN THÀNH CÔNG</span>
+                            <span class="crypto-timer-pill" id="tabpage-create-timer-pill">
+                                <span class="timer-dot"></span>
+                                <span class="timer-label">Hiệu lực:</span>
+                                <strong id="tabpage-create-timer">05:00</strong>
+                            </span>
+                        </div>
+                        <div class="out-code-text" id="tabpage-generated-code">XXXX-XXXX-XXXX</div>
+                        
+                        <!-- Progress bar -->
+                        <div class="timer-progress-wrap">
+                            <div class="timer-progress-bar" id="tabpage-create-progress-bar" style="width: 100%;"></div>
+                        </div>
+
+                        <div class="rc-actions-grid" style="margin-top: 10px;">
+                            <button class="btn-copy-doveso" id="btn-copy-tabpage-code" onclick="copyTabpageGeneratedCode()">
+                                📋 Sao Chép Mã 12 Ký Tự
+                            </button>
+                            <button class="btn-rc-action btn-rc-pay" onclick="openWebCryptoToRedeem('tabpage')">
+                                🚀 Mở WebCrypto & Nạp
+                            </button>
+                        </div>
+
+                        <button type="button" class="btn-cancel-refund" onclick="cancelTabpageOutCode()" title="Hủy mã và hoàn tiền lại vào số dư DoVeSo">
+                            ↩️ Hủy Mã & Hoàn Lại Tiền
+                        </button>
+
+                        <p class="out-sub">Hãy sao chép mã này hoặc bấm "Mở WebCrypto & Nạp" để nhận tiền USDT trên sàn WebCrypto!</p>
+                    </div>
+                </div>
+
+                <!-- SUB 3: HISTORY -->
+                <div id="tabpage-panel-history" style="display: none;">
+                    <div class="doveso-history-list" id="tabpage-transfer-history-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Deposit Modal -->
@@ -442,7 +806,17 @@
                 <button class="modal-close" onclick="closeDepositModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p>Chọn số tiền muốn nạp:</p>
+                <!-- Direct 12-char Crypto Transfer Quick Banner -->
+                <div class="deposit-crypto-banner" onclick="closeDepositModal(); openCryptoTransferModal();">
+                    <div class="crypto-banner-left">
+                        <span class="crypto-badge">⚡ LIÊN KẾT WEBCRYPTO</span>
+                        <strong>Nạp Bằng Mã Chuyển Tiền 12 Ký Tự</strong>
+                        <span class="crypto-sub">Nhập mã tạo từ sàn WebCrypto để nạp số dư tức thì</span>
+                    </div>
+                    <span class="crypto-arrow">➜</span>
+                </div>
+
+                <p>Hoặc chọn số tiền muốn nạp nhanh:</p>
                 <div class="deposit-options">
                     <button class="deposit-btn" onclick="deposit(500000)">500k</button>
                     <button class="deposit-btn" onclick="deposit(1000000)">1 Triệu</button>
@@ -467,6 +841,199 @@
         </div>
     </div>
 
+    <!-- Crypto Transfer Modal (WebCrypto <-> DoVeSo) -->
+    <div class="modal-overlay" id="crypto-transfer-modal" onclick="closeCryptoTransferModal(event)">
+        <div class="modal-card crypto-modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="crypto-header-title">
+                    <span class="crypto-title-icon">⚡</span>
+                    <h3>Chuyển Tiền Liên Kết (DoVeSo &harr; WebCrypto)</h3>
+                </div>
+                <button class="modal-close" onclick="closeCryptoTransferModal()">&times;</button>
+            </div>
+
+            <!-- Transfer Modal Tabs -->
+            <div class="crypto-transfer-tabs">
+                <button class="crypto-tab-btn active" id="doveso-tab-redeem" onclick="switchDoVeSoTransferTab('redeem')">
+                    📥 Nhận Tiền Từ Crypto (5 Phút)
+                </button>
+                <button class="crypto-tab-btn" id="doveso-tab-create" onclick="switchDoVeSoTransferTab('create')">
+                    📤 Chuyển Sang WebCrypto
+                </button>
+                <button class="crypto-tab-btn" id="doveso-tab-history" onclick="switchDoVeSoTransferTab('history')">
+                    📜 Lịch Sử Giao Dịch
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- TAB 1: RECEIVE 12-CHAR CODE WITH 5-MINUTE COUNTDOWN -->
+                <div class="crypto-tab-panel active" id="doveso-panel-redeem">
+                    <div class="crypto-info-alert">
+                        <span class="alert-icon">⚡</span>
+                        <span>Mã nhận tiền tự tạo có hiệu lực <strong>5 phút</strong>. Sao chép mã hoặc bấm chuyển sang WebCrypto để nhận tiền nạp vào số dư!</span>
+                    </div>
+
+                    <!-- Amount Selector Chips -->
+                    <div class="receive-amount-selector" style="margin-bottom: 16px;">
+                        <div class="ras-header">
+                            <span class="ras-label">Chọn số tiền muốn nhận từ WebCrypto:</span>
+                            <span class="ras-usdt" id="modal-receive-usdt-label">≈ $7.85 USDT</span>
+                        </div>
+                        <div class="preset-chips preset-chips-receive">
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(50000)">50k</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(100000)">100k</button>
+                            <button type="button" class="btn-preset-mini active" id="modal-chip-rcv-200k" onclick="setReceiveAmount(200000)">200k</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(500000)">500k</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(1000000)">1 Triệu</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(2000000)">2 Triệu</button>
+                            <button type="button" class="btn-preset-mini" onclick="setReceiveAmount(5000000)">5 Triệu</button>
+                        </div>
+                        <div class="custom-input-group custom-input-group-sm" style="margin-top: 8px;">
+                            <input type="number" id="input-modal-receive-custom-amount" placeholder="Hoặc nhập số tiền VNĐ khác (tối thiểu 10,000đ)..." min="10000" step="10000" oninput="onModalReceiveCustomChange(this.value)">
+                            <button type="button" class="btn-apply-amount" onclick="applyModalCustomReceive()">Áp Dụng</button>
+                        </div>
+                    </div>
+
+                    <!-- Receive Code Display Card -->
+                    <div class="doveso-receive-card" id="modal-receive-card">
+                        <div class="rc-header">
+                            <div class="rc-tag-row">
+                                <span class="rc-tag">🔑 MÃ NHẬN TIỀN CỦA BẠN:</span>
+                                <span class="crypto-timer-pill" id="modal-receive-timer-pill">
+                                    <span class="timer-dot"></span>
+                                    <span class="timer-label">Hiệu lực:</span>
+                                    <strong id="modal-receive-timer">05:00</strong>
+                                </span>
+                            </div>
+                            <span class="rc-amount-badge" id="modal-receive-amount-badge">+200,000đ</span>
+                        </div>
+                        
+                        <div class="rc-code-wrap">
+                            <div class="rc-code-text font-mono" id="modal-receive-code-display">XXXX-XXXX-XXXX</div>
+                            <button type="button" class="btn-rc-refresh" onclick="refreshQuickReceiveCode()" title="Làm mới mã & tạo lại 5 phút">
+                                🔄 Đổi Mã Mới
+                            </button>
+                        </div>
+
+                        <!-- 5-minute countdown progress bar -->
+                        <div class="timer-progress-wrap">
+                            <div class="timer-progress-bar" id="modal-receive-progress-bar" style="width: 100%;"></div>
+                        </div>
+                        <div class="timer-status-text" id="modal-receive-status-text">
+                            ⏱️ Mã có hiệu lực trong 5 phút. Hãy sao chép hoặc chuyển sang WebCrypto thanh toán.
+                        </div>
+
+                        <!-- Action Buttons: Copy, Go to Crypto, Instant Pay -->
+                        <div class="rc-actions-grid">
+                            <button type="button" class="btn-rc-action btn-rc-copy" id="btn-copy-modal-receive" onclick="copyQuickReceiveCode()">
+                                📋 Sao Chép Mã Nhận Tiền
+                            </button>
+                            <button type="button" class="btn-rc-action btn-rc-pay" onclick="openWebCryptoToPay('modal')">
+                                🚀 Chuyển Sang WebCrypto Thanh Toán
+                            </button>
+                        </div>
+                        
+                        <button type="button" class="btn-rc-instant" onclick="executeInstantCryptoPay('modal')">
+                            ⚡ Nạp Nhanh Trực Tiếp (Tự Trừ Sàn Crypto & Cộng DoVeSo)
+                        </button>
+                    </div>
+
+                    <!-- Manual Paste Accordion Toggle -->
+                    <div class="manual-paste-toggle-wrap">
+                        <button type="button" class="btn-manual-toggle" onclick="toggleModalManualPaste()">
+                            <span id="modal-paste-toggle-icon">▸</span> Hoặc dán mã 12 ký tự đã có từ WebCrypto
+                        </button>
+                        <div class="manual-paste-box" id="modal-manual-paste-box" style="display: none;">
+                            <div class="crypto-code-input-wrap">
+                                <input type="text" id="input-doveso-code" placeholder="VD: 92PQ-U4HQ-NVVS" maxlength="14" autocomplete="off" oninput="onDoVeSoCodeInput(this.value)">
+                                <button type="button" class="btn-paste-code" onclick="pasteDoVeSoCode()">📋 Dán</button>
+                            </div>
+                            <div id="doveso-code-feedback" class="doveso-code-feedback" style="display: none; margin-top: 8px;"></div>
+                            <button class="btn-confirm-redeem" id="btn-confirm-redeem" style="margin-top: 10px;" onclick="executeRedeemInDoVeSo()">
+                                💰 Xác Nhận Nạp Tiền Vào Số Dư
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TRANSFER FROM DOVESO BACK TO WEBCRYPTO -->
+                <div class="crypto-tab-panel" id="doveso-panel-create" style="display: none;">
+                    <div class="crypto-info-alert">
+                        <span class="alert-icon">🔄</span>
+                        <span>Trích số dư xổ số để tạo mã <strong>12 ký tự</strong> quy đổi thành USDT nạp vào sàn <strong>WebCrypto</strong>. Mã có hiệu lực trong 5 phút.</span>
+                    </div>
+
+                    <div class="crypto-avail-badge">
+                        <span>Số dư hiện có:</span>
+                        <strong id="doveso-avail-text">500,000đ</strong>
+                    </div>
+
+                    <div class="crypto-input-block">
+                        <label for="input-doveso-out-amount">Số tiền muốn chuyển về WebCrypto (VNĐ):</label>
+                        <div class="custom-input-group">
+                            <input type="number" id="input-doveso-out-amount" placeholder="VD: 254800 (tối thiểu 25,000đ)" min="25000" step="1000" oninput="onDoVeSoOutAmountChange(this.value)">
+                        </div>
+                        <div class="crypto-calc-sub">
+                            <span>Quy đổi nhận được ở WebCrypto:</span>
+                            <strong id="doveso-out-usdt-preview" style="color: #F0B90B;">$0.00 USDT</strong>
+                        </div>
+                    </div>
+
+                    <!-- Quick buttons -->
+                    <div class="deposit-options" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 12px;">
+                        <button type="button" class="deposit-btn" onclick="setDoVeSoOutPreset(100000)">100k</button>
+                        <button type="button" class="deposit-btn" onclick="setDoVeSoOutPreset(500000)">500k</button>
+                        <button type="button" class="deposit-btn" onclick="setDoVeSoOutPreset(1000000)">1 Triệu</button>
+                    </div>
+
+                    <button class="btn-confirm-redeem" onclick="executeCreateCodeFromDoVeSo()">
+                        🔑 Tạo Mã 12 Ký Tự Rút Tiền
+                    </button>
+
+                    <!-- Generated Code Box -->
+                    <div class="doveso-out-card" id="doveso-out-card" style="display: none;">
+                        <div class="out-header-row">
+                            <span class="out-badge">✅ ĐÃ TẠO MÃ RÚT TIỀN THÀNH CÔNG</span>
+                            <span class="crypto-timer-pill" id="modal-create-timer-pill">
+                                <span class="timer-dot"></span>
+                                <span class="timer-label">Hiệu lực:</span>
+                                <strong id="modal-create-timer">05:00</strong>
+                            </span>
+                        </div>
+                        <div class="out-code-text" id="doveso-generated-code">XXXX-XXXX-XXXX</div>
+                        
+                        <!-- Progress bar -->
+                        <div class="timer-progress-wrap">
+                            <div class="timer-progress-bar" id="modal-create-progress-bar" style="width: 100%;"></div>
+                        </div>
+
+                        <div class="rc-actions-grid" style="margin-top: 10px;">
+                            <button class="btn-copy-doveso" id="btn-copy-doveso" onclick="copyDoVeSoGeneratedCode()">
+                                📋 Sao Chép Mã 12 Ký Tự
+                            </button>
+                            <button class="btn-rc-action btn-rc-pay" onclick="openWebCryptoToRedeem('modal')">
+                                🚀 Mở WebCrypto & Nạp
+                            </button>
+                        </div>
+
+                        <button type="button" class="btn-cancel-refund" onclick="cancelModalOutCode()" title="Hủy mã và hoàn tiền lại vào số dư DoVeSo">
+                            ↩️ Hủy Mã & Hoàn Lại Tiền
+                        </button>
+
+                        <p class="out-sub">Hãy sao chép mã này hoặc bấm "Mở WebCrypto & Nạp" để nhận tiền USDT trên sàn WebCrypto!</p>
+                    </div>
+                </div>
+
+                <!-- TAB 3: HISTORY -->
+                <div class="crypto-tab-panel" id="doveso-panel-history" style="display: none;">
+                    <div class="doveso-history-list" id="doveso-transfer-history-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Win Notification -->
     <div class="win-notification" id="win-notification" style="display:none;">
         <div class="win-content">
@@ -479,29 +1046,25 @@
         </div>
     </div>
 
+    <!-- Floating Crypto Transfer Button (Unmissable) -->
+    <div class="floating-crypto-btn" onclick="openCryptoTransferModal()" title="Bấm để nạp hoặc chuyển tiền bằng mã 12 ký tự">
+        <span class="fc-pulse"></span>
+        <span class="fc-icon">⚡</span>
+        <span class="fc-text"><strong>Nhập Mã WebCrypto</strong> (12 Ký Tự)</span>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
     <script>
         // Force Cache Busting for Edge & other browsers
         (function() {
-            var v = '4.1.0';
+            var v = '6.0.0';
             if (localStorage.getItem('xskt_app_version') !== v) {
                 localStorage.setItem('xskt_app_version', v);
-                
-                // Clear old legacy states that caused bugs
-                localStorage.removeItem('xskt_state');
-                localStorage.removeItem('xskt_state_v2');
-                localStorage.removeItem('xskt_state_v3');
-                
-                // Force reload page with cache-busting query param
-                if (window.location.href.indexOf('cb=') === -1) {
-                    var separator = window.location.href.indexOf('?') !== -1 ? '&' : '?';
-                    window.location.replace(window.location.href + separator + 'cb=' + new Date().getTime());
-                }
             }
         })();
     </script>
-    <script src="app.js?v=4.1.0"></script>
+    <script src="app.js?v=6.0.0"></script>
 </body>
 </html>

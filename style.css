@@ -2343,3 +2343,894 @@ body::before {
         font-size: 1.5rem;
     }
 }
+
+/* ==========================================================================
+   Crypto Transfer (DoVeSo <-> WebCrypto) Styles
+   ========================================================================== */
+.btn-crypto-link {
+    background: linear-gradient(135deg, #f39c12, #F0B90B);
+    color: #1a1a2e;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition-med);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(240, 185, 11, 0.25);
+}
+.btn-crypto-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 185, 11, 0.45);
+    background: linear-gradient(135deg, #F0B90B, #f1c40f);
+}
+.btn-crypto-link:active { transform: scale(0.96); }
+
+.deposit-crypto-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(240, 185, 11, 0.15), rgba(230, 57, 70, 0.15));
+    border: 1.5px solid rgba(240, 185, 11, 0.4);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    cursor: pointer;
+    transition: var(--transition-med);
+}
+.deposit-crypto-banner:hover {
+    border-color: #F0B90B;
+    background: linear-gradient(135deg, rgba(240, 185, 11, 0.25), rgba(230, 57, 70, 0.25));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 185, 11, 0.2);
+}
+.crypto-banner-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.crypto-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #F0B90B;
+    letter-spacing: 0.5px;
+}
+.crypto-sub {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.crypto-arrow {
+    font-size: 1.3rem;
+    color: #F0B90B;
+    transition: transform 0.2s;
+}
+.deposit-crypto-banner:hover .crypto-arrow {
+    transform: translateX(4px);
+}
+
+.crypto-modal-card {
+    max-width: 520px !important;
+    width: 95%;
+}
+.crypto-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.crypto-title-icon { font-size: 1.4rem; }
+
+.crypto-transfer-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 6px 12px 0;
+    gap: 4px;
+}
+.crypto-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.crypto-tab-btn:hover { color: #fff; }
+.crypto-tab-btn.active {
+    color: #F0B90B;
+    border-bottom-color: #F0B90B;
+    font-weight: 800;
+}
+
+.crypto-info-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(240, 185, 11, 0.08);
+    border: 1px solid rgba(240, 185, 11, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.crypto-input-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.crypto-input-block label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+}
+.crypto-code-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.crypto-code-input-wrap input {
+    width: 100%;
+    padding: 14px 75px 14px 16px;
+    background: #0f1026;
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    color: #F0B90B;
+    font-family: monospace;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    outline: none;
+    transition: var(--transition-fast);
+}
+.crypto-code-input-wrap input:focus {
+    border-color: #F0B90B;
+    box-shadow: 0 0 15px rgba(240, 185, 11, 0.25);
+}
+.btn-paste-code {
+    position: absolute;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.btn-paste-code:hover {
+    background: #F0B90B;
+    color: #000;
+}
+
+.doveso-code-feedback {
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-top: 6px;
+}
+.doveso-code-feedback.success {
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #2ecc71;
+}
+.doveso-code-feedback.error {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    color: #e74c3c;
+}
+
+.btn-confirm-redeem {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #F0B90B, #f39c12);
+    color: #1a1a2e;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition-med);
+    box-shadow: 0 4px 15px rgba(240, 185, 11, 0.3);
+}
+.btn-confirm-redeem:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 185, 11, 0.45);
+}
+
+.crypto-avail-badge {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+}
+.crypto-avail-badge strong {
+    color: #2ecc71;
+    font-size: 1rem;
+}
+.crypto-calc-sub {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.doveso-out-card {
+    background: linear-gradient(135deg, #161833, #0f1026);
+    border: 1.5px solid #F0B90B;
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-top: 16px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.out-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #2ecc71;
+    margin-bottom: 10px;
+}
+.out-code-text {
+    font-family: monospace;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #F0B90B;
+    background: #090a18;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px dashed rgba(240, 185, 11, 0.5);
+    user-select: all;
+    margin-bottom: 12px;
+}
+.btn-copy-doveso {
+    width: 100%;
+    padding: 12px;
+    background: #F0B90B;
+    color: #000;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.btn-copy-doveso:hover { background: #f1c40f; }
+.btn-copy-doveso.copied {
+    background: #2ecc71 !important;
+    color: #fff !important;
+}
+.out-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.doveso-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+.doveso-hist-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.doveso-hist-code {
+    font-family: monospace;
+    font-weight: 700;
+    color: #F0B90B;
+    font-size: 0.95rem;
+}
+.doveso-hist-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+.doveso-hist-amount {
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-align: right;
+}
+.doveso-hist-status {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.doveso-hist-status.success { color: #2ecc71; }
+.doveso-hist-status.pending { color: #F0B90B; }
+
+/* Tab Nav Crypto Button */
+.tab-btn-crypto {
+    position: relative;
+    background: linear-gradient(135deg, rgba(240, 185, 11, 0.1), rgba(243, 156, 18, 0.15)) !important;
+    border: 1px solid rgba(240, 185, 11, 0.3) !important;
+}
+.tab-btn-crypto .tab-label { color: #F0B90B !important; font-weight: 800; }
+.tab-badge-new {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #e63946;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+/* Quick Crypto Card in Buy Tab */
+.crypto-quick-card {
+    background: linear-gradient(135deg, #181b36, #121429);
+    border: 2px solid #F0B90B !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(240, 185, 11, 0.15) !important;
+    margin-bottom: 24px;
+    padding: 18px 20px;
+}
+.crypto-quick-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.cq-left {
+    flex: 1;
+    min-width: 260px;
+}
+.cq-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #F0B90B;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+.cq-left h3 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.cq-left p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+.cq-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 280px;
+}
+.cq-right .crypto-code-input-wrap {
+    flex: 1;
+}
+.btn-quick-redeem-action {
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #F0B90B, #f39c12);
+    color: #1a1a2e;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-med);
+    box-shadow: 0 4px 15px rgba(240, 185, 11, 0.3);
+}
+.btn-quick-redeem-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 185, 11, 0.45);
+}
+
+/* Floating Crypto Button (Unmissable, Bottom-Right) */
+.floating-crypto-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    background: linear-gradient(135deg, #1a1a2e, #0f1026);
+    border: 2px solid #F0B90B;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(240, 185, 11, 0.35);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: dvPulseFloat 3s infinite;
+}
+.floating-crypto-btn:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 30px rgba(240, 185, 11, 0.55);
+    background: linear-gradient(135deg, #252849, #1a1a2e);
+}
+.fc-pulse {
+    width: 10px;
+    height: 10px;
+    background: #F0B90B;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #F0B90B;
+    animation: bnPulseDot 1.5s infinite;
+}
+.fc-icon { font-size: 1.1rem; }
+@keyframes dvPulseFloat {
+    0%, 100% { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(240, 185, 11, 0.25); }
+    50% { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 30px rgba(240, 185, 11, 0.55); }
+}
+
+/* Header Create Code Button */
+.btn-crypto-create {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition-med);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.25);
+}
+.btn-crypto-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.45);
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+.btn-crypto-create:active { transform: scale(0.96); }
+
+/* Quick Card Tabs */
+.cq-header-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+.cq-tab-btn {
+    flex: 1;
+    min-width: 220px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.cq-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.cq-tab-btn.active {
+    background: linear-gradient(135deg, rgba(240, 185, 11, 0.2), rgba(243, 156, 18, 0.25));
+    border-color: #F0B90B;
+    color: #F0B90B;
+}
+
+.btn-preset-mini {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.btn-preset-mini:hover {
+    background: #F0B90B;
+    color: #121429;
+    border-color: #F0B90B;
+}
+.btn-preset-mini.active {
+    background: linear-gradient(135deg, #F0B90B, #f39c12);
+    color: #121429;
+    border-color: #F0B90B;
+    box-shadow: 0 0 10px rgba(240, 185, 11, 0.4);
+}
+
+/* GitHub repo link in header */
+.crypto-repo-link {
+    color: #F0B90B;
+    text-decoration: underline;
+    font-weight: 700;
+    transition: color 0.2s;
+}
+.crypto-repo-link:hover {
+    color: #fff;
+}
+
+/* Badge Row & Countdown Pill */
+.box-badge-row, .out-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.crypto-timer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(240, 185, 11, 0.15);
+    border: 1px solid rgba(240, 185, 11, 0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: #F0B90B;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+.crypto-timer-pill.warning {
+    background: rgba(230, 57, 70, 0.2);
+    border-color: #e63946;
+    color: #ff6b6b;
+    animation: dvTimerWarningPulse 1s infinite alternate;
+}
+.crypto-timer-pill.expired {
+    background: rgba(100, 100, 100, 0.3);
+    border-color: #888;
+    color: #aaa;
+}
+
+.timer-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2ecc71;
+    box-shadow: 0 0 6px #2ecc71;
+    animation: dvPulseDot 1.2s infinite;
+}
+.crypto-timer-pill.warning .timer-dot {
+    background: #e63946;
+    box-shadow: 0 0 8px #e63946;
+}
+.crypto-timer-pill.expired .timer-dot {
+    background: #888;
+    box-shadow: none;
+    animation: none;
+}
+
+@keyframes dvTimerWarningPulse {
+    0% { transform: scale(1); box-shadow: 0 0 5px rgba(230, 57, 70, 0.3); }
+    100% { transform: scale(1.04); box-shadow: 0 0 15px rgba(230, 57, 70, 0.6); }
+}
+
+/* Receive Amount Selector */
+.receive-amount-selector {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+.ras-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+}
+.ras-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.ras-usdt {
+    color: #F0B90B;
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+.preset-chips-receive {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 4px;
+}
+.custom-input-group-sm {
+    display: flex;
+    gap: 6px;
+}
+.custom-input-group-sm input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+.btn-apply-amount {
+    background: rgba(240, 185, 11, 0.2);
+    border: 1px solid #F0B90B;
+    color: #F0B90B;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+.btn-apply-amount:hover {
+    background: #F0B90B;
+    color: #121429;
+}
+
+/* DoVeSo Receive Card */
+.doveso-receive-card {
+    background: linear-gradient(135deg, rgba(240, 185, 11, 0.08), rgba(26, 26, 46, 0.8));
+    border: 1.5px solid rgba(240, 185, 11, 0.45);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 15px rgba(240, 185, 11, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+.rc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.rc-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.rc-tag {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #F0B90B;
+    letter-spacing: 0.5px;
+}
+.rc-amount-badge {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    font-family: monospace;
+    box-shadow: 0 2px 6px rgba(46, 204, 113, 0.35);
+}
+
+.rc-code-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(240, 185, 11, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 8px;
+}
+.rc-code-text {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #F0B90B;
+    letter-spacing: 2.5px;
+    text-shadow: 0 0 12px rgba(240, 185, 11, 0.5);
+    user-select: all;
+    overflow-x: auto;
+}
+.btn-rc-refresh {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+.btn-rc-refresh:hover {
+    background: rgba(240, 185, 11, 0.25);
+    border-color: #F0B90B;
+    color: #F0B90B;
+}
+
+/* Timer Progress Wrap */
+.timer-progress-wrap {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+.timer-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #2ecc71, #F0B90B);
+    border-radius: 4px;
+    transition: width 1s linear, background 0.3s ease;
+}
+.timer-progress-bar.warning {
+    background: linear-gradient(90deg, #f39c12, #e63946);
+}
+.timer-status-text {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    line-height: 1.3;
+}
+
+/* Actions Grid (Copy, Open Crypto, Instant Pay) */
+.rc-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.btn-rc-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition-med);
+    text-align: center;
+    white-space: nowrap;
+}
+.btn-rc-copy {
+    background: linear-gradient(135deg, #F0B90B, #f39c12);
+    color: #121429;
+    box-shadow: 0 4px 12px rgba(240, 185, 11, 0.3);
+}
+.btn-rc-copy:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(240, 185, 11, 0.45);
+}
+.btn-rc-copy.copied {
+    background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+    color: #fff !important;
+}
+
+.btn-rc-pay {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+.btn-rc-pay:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(52, 152, 219, 0.45);
+    background: linear-gradient(135deg, #2980b9, #1c638f);
+}
+
+.btn-rc-instant {
+    width: 100%;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.25));
+    border: 1.5px solid #2ecc71;
+    color: #2ecc71;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: var(--transition-med);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.btn-rc-instant:hover {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-cancel-refund {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(230, 57, 70, 0.1);
+    border: 1px dashed rgba(230, 57, 70, 0.5);
+    color: #ff6b6b;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.btn-cancel-refund:hover {
+    background: rgba(230, 57, 70, 0.25);
+    border-color: #e63946;
+    color: #fff;
+}
+
+/* Manual Paste Toggle */
+.manual-paste-toggle-wrap {
+    margin-top: 14px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-top: 10px;
+}
+.btn-manual-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 0;
+    transition: color 0.2s;
+}
+.btn-manual-toggle:hover {
+    color: #F0B90B;
+}
+.manual-paste-box {
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 600px) {
+    .rc-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    .rc-code-text {
+        font-size: 1.15rem;
+        letter-spacing: 1.5px;
+    }
+}
+
+
+
+
