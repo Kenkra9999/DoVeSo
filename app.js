@@ -448,7 +448,7 @@ function buyTicket() {
     
     // Kiểm tra số dư chính xác
     if (state.balance < TICKET_PRICE) {
-        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(TICKET_PRICE)} để mua 1 vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Hãy bấm nút "Nạp Tiền" ở trên nếu muốn nạp thêm!`, 'error');
+        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(TICKET_PRICE)} để mua 1 vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Hãy bấm nút "Nhận Tiền" ở trên để nhận tiền từ WebCrypto!`, 'error');
         return;
     }
     
@@ -491,7 +491,7 @@ function quickBuy(count) {
     
     // Kiểm tra số dư chính xác tuyệt đối
     if (state.balance < totalCost) {
-        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(totalCost)} để mua ${count.toLocaleString('vi-VN')} vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Hãy bấm nút "Nạp Tiền" ở trên nếu muốn nạp thêm!`, 'error');
+        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(totalCost)} để mua ${count.toLocaleString('vi-VN')} vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Hãy bấm nút "Nhận Tiền" ở trên để nhận tiền từ WebCrypto!`, 'error');
         return;
     }
     

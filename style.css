@@ -250,29 +250,193 @@ body::before {
     50% { transform: scale(1.15); color: var(--green-primary); }
 }
 
-.btn-deposit {
-    background: var(--red-gradient);
-    color: white;
-    border: none;
+/* ---- Header Action Buttons (Tạo Mã & Nhận Tiền) ---- */
+.btn-header-receive {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    border: 1px solid rgba(16, 185, 129, 0.4);
     border-radius: var(--radius-md);
-    padding: 12px 20px;
-    font-size: 0.85rem;
+    padding: 10px 18px;
+    font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    transition: var(--transition-med);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-header-receive .btn-icon {
+    font-size: 1.1rem;
+}
+
+.btn-header-receive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: skewX(-25deg);
+    animation: btn-shine 3.5s infinite;
+}
+
+.btn-header-receive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.55);
+    background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+}
+
+.btn-header-receive:active {
+    transform: scale(0.96);
+}
+
+.btn-header-create {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #0a0a1a;
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    border-radius: var(--radius-md);
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-header-create .btn-icon {
+    font-size: 1.1rem;
+}
+
+.btn-header-create::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-25deg);
+    animation: btn-shine 3.5s infinite 1.75s;
+}
+
+.btn-header-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 215, 0, 0.55);
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+}
+
+.btn-header-create:active {
+    transform: scale(0.96);
+}
+
+@keyframes btn-shine {
+    0% { left: -75%; }
+    30% { left: 125%; }
+    100% { left: 125%; }
+}
+
+.tab-btn-crypto {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(16, 185, 129, 0.15)) !important;
+    border: 1px solid rgba(255, 215, 0, 0.4) !important;
+    color: #ffd700 !important;
+}
+
+.tab-btn-crypto:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(16, 185, 129, 0.25)) !important;
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.tab-badge-new {
+    background: linear-gradient(135deg, #e63946, #ff6b6b);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 4px;
+    letter-spacing: 0.5px;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+/* Floating Action Button (Unmissable Bottom Right) */
+.floating-crypto-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 990;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #1a1a3a 0%, #111128 100%);
+    border: 2px solid #ffd700;
+    border-radius: 50px;
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.35);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+}
+
+.floating-crypto-btn:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.6);
+    background: linear-gradient(135deg, #252550 0%, #1a1a3a 100%);
+}
+
+.floating-crypto-btn:active {
+    transform: scale(0.96);
+}
+
+.fc-pulse {
+    width: 10px;
+    height: 10px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #10b981;
+    animation: fc-pulse-anim 1.5s infinite;
+}
+
+@keyframes fc-pulse-anim {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.fc-icon {
+    font-size: 1.3rem;
+}
+
+.fc-text {
+    font-size: 0.85rem;
     white-space: nowrap;
 }
 
-.btn-deposit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+.fc-text strong {
+    color: #ffd700;
 }
 
-.btn-deposit:active {
-    transform: scale(0.95);
+/* Fallback legacy .btn-deposit */
+.btn-deposit {
+    display: none;
 }
 
 /* ---- Tab Navigation ---- */

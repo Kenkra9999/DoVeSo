@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=6.0.0">
+    <link rel="stylesheet" href="style.css?v=7.0.0">
 </head>
 <body>
     <!-- Floating Particles Background -->
@@ -37,14 +37,11 @@
                     <span class="balance-label">Số dư</span>
                     <span class="balance-amount" id="balance-display">500,000đ</span>
                 </div>
-                <button class="btn-deposit" id="btn-deposit" onclick="openDepositModal()">
-                    <span class="deposit-icon">💰</span> Nạp Tiền
+                <button class="btn-header-receive" id="btn-header-receive" onclick="openCryptoTransferModal('redeem')" title="Nhận tiền bằng mã 12 ký tự từ WebCrypto">
+                    <span class="btn-icon">📥</span> Nhận Tiền
                 </button>
-                <button class="btn-crypto-link" id="btn-crypto-link" onclick="openCryptoTransferModal('receive')" title="Mã nhận tiền tự động 5 phút từ WebCrypto">
-                    <span class="crypto-icon">📥</span> Nhận Tiền Crypto (5 Phút)
-                </button>
-                <button class="btn-crypto-create" id="btn-crypto-create" onclick="openCryptoTransferModal('create')" title="Tạo mã 12 ký tự để chuyển tiền sang WebCrypto">
-                    <span class="crypto-icon">📤</span> Chuyển Sang WebCrypto
+                <button class="btn-header-create" id="btn-header-create" onclick="openCryptoTransferModal('create')" title="Tạo mã 12 ký tự chuyển tiền sang WebCrypto">
+                    <span class="btn-icon">📤</span> Tạo Mã
                 </button>
             </div>
         </div>
@@ -72,9 +69,9 @@
                 <span class="tab-badge" id="badge-tickets-pending" style="display:none;">0</span>
             </button>
             <button class="tab-btn tab-btn-crypto" data-tab="crypto" onclick="switchTab('crypto')">
-                <span class="tab-icon">⚡</span>
-                <span class="tab-label">Mã WebCrypto</span>
-                <span class="tab-badge-new">12 SỐ</span>
+                <span class="tab-icon">✨</span>
+                <span class="tab-label">Tạo Mã & Nhận Tiền</span>
+                <span class="tab-badge-new">12 KÝ TỰ</span>
             </button>
         </div>
     </nav>
@@ -614,17 +611,17 @@
         <!-- ===== TAB 5: WEBCRYPTO TRANSFER & REDEEM TAB ===== -->
         <section class="tab-content" id="tab-crypto">
             <div class="section-header">
-                <h2>⚡ Liên Kết & Chuyển Tiền WebCrypto</h2>
-                <p>Nạp tiền hoặc rút tiền giữa <strong>Xổ Số Kiến Thiết (DoVeSo)</strong> và <strong>Sàn WebCrypto</strong> qua dãy mã 12 ký tự.</p>
+                <h2>✨ Cổng Tạo Mã & Nhận Tiền (WebCrypto ⇄ DoVeSo)</h2>
+                <p>Chuyển tiền hai chiều an toàn giữa <strong>Xổ Số Kiến Thiết (DoVeSo)</strong> và <strong>Sàn WebCrypto</strong> bằng dãy mã 12 ký tự.</p>
             </div>
 
             <div class="card" style="max-width: 760px; margin: 0 auto;">
                 <div class="crypto-transfer-tabs" style="border-radius: var(--radius-sm); margin-bottom: 20px;">
                     <button class="crypto-tab-btn active" id="tabpage-btn-redeem" onclick="switchTabCryptoSub('redeem')">
-                        📥 Nhận Tiền Từ WebCrypto (5 Phút)
+                        📥 Nhận Tiền
                     </button>
                     <button class="crypto-tab-btn" id="tabpage-btn-create" onclick="switchTabCryptoSub('create')">
-                        📤 Chuyển Sang WebCrypto
+                        📤 Tạo Mã
                     </button>
                     <button class="crypto-tab-btn" id="tabpage-btn-history" onclick="switchTabCryptoSub('history')">
                         📜 Lịch Sử Giao Dịch
@@ -715,7 +712,7 @@
                             </div>
                             <div id="tabpage-code-feedback" class="doveso-code-feedback" style="display: none; margin-top: 8px;"></div>
                             <button class="btn-confirm-redeem" style="margin-top: 10px;" onclick="executeTabpageRedeem()">
-                                💰 Xác Nhận Nạp Tiền Vào Số Dư
+                                💰 Xác Nhận Nhận Tiền Vào Số Dư
                             </button>
                         </div>
                     </div>
@@ -846,8 +843,8 @@
         <div class="modal-card crypto-modal-card" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <div class="crypto-header-title">
-                    <span class="crypto-title-icon">⚡</span>
-                    <h3>Chuyển Tiền Liên Kết (DoVeSo &harr; WebCrypto)</h3>
+                    <span class="crypto-title-icon">✨</span>
+                    <h3>Tạo Mã & Nhận Tiền (DoVeSo &harr; WebCrypto)</h3>
                 </div>
                 <button class="modal-close" onclick="closeCryptoTransferModal()">&times;</button>
             </div>
@@ -855,10 +852,10 @@
             <!-- Transfer Modal Tabs -->
             <div class="crypto-transfer-tabs">
                 <button class="crypto-tab-btn active" id="doveso-tab-redeem" onclick="switchDoVeSoTransferTab('redeem')">
-                    📥 Nhận Tiền Từ Crypto (5 Phút)
+                    📥 Nhận Tiền
                 </button>
                 <button class="crypto-tab-btn" id="doveso-tab-create" onclick="switchDoVeSoTransferTab('create')">
-                    📤 Chuyển Sang WebCrypto
+                    📤 Tạo Mã
                 </button>
                 <button class="crypto-tab-btn" id="doveso-tab-history" onclick="switchDoVeSoTransferTab('history')">
                     📜 Lịch Sử Giao Dịch
@@ -950,7 +947,7 @@
                             </div>
                             <div id="doveso-code-feedback" class="doveso-code-feedback" style="display: none; margin-top: 8px;"></div>
                             <button class="btn-confirm-redeem" id="btn-confirm-redeem" style="margin-top: 10px;" onclick="executeRedeemInDoVeSo()">
-                                💰 Xác Nhận Nạp Tiền Vào Số Dư
+                                💰 Xác Nhận Nhận Tiền Vào Số Dư
                             </button>
                         </div>
                     </div>
@@ -1047,10 +1044,10 @@
     </div>
 
     <!-- Floating Crypto Transfer Button (Unmissable) -->
-    <div class="floating-crypto-btn" onclick="openCryptoTransferModal()" title="Bấm để nạp hoặc chuyển tiền bằng mã 12 ký tự">
+    <div class="floating-crypto-btn" onclick="openCryptoTransferModal('redeem')" title="Bấm để Tạo Mã hoặc Nhận Tiền bằng mã 12 ký tự">
         <span class="fc-pulse"></span>
-        <span class="fc-icon">⚡</span>
-        <span class="fc-text"><strong>Nhập Mã WebCrypto</strong> (12 Ký Tự)</span>
+        <span class="fc-icon">✨</span>
+        <span class="fc-text"><strong>Tạo Mã & Nhận Tiền</strong> (12 Ký Tự)</span>
     </div>
 
     <!-- Toast Container -->
@@ -1059,12 +1056,12 @@
     <script>
         // Force Cache Busting for Edge & other browsers
         (function() {
-            var v = '6.0.0';
+            var v = '7.0.0';
             if (localStorage.getItem('xskt_app_version') !== v) {
                 localStorage.setItem('xskt_app_version', v);
             }
         })();
     </script>
-    <script src="app.js?v=6.0.0"></script>
+    <script src="app.js?v=7.0.0"></script>
 </body>
 </html>
