@@ -1,6 +1,6 @@
 /* ========================================
-   XỔ SỐ KIẾN THIẾT VIỆT NAM - App Logic v2.2.0
-   Ultra-High Performance & 100M+ Tickets Engine
+   XỔ SỐ KIẾN THIẾT VIỆT NAM - App Logic v2.3.0
+   Precision Balance & 100M+ Tickets Engine
    ======================================== */
 
 // ============ STATE & CONSTANTS ============
@@ -32,22 +32,22 @@ const PRIZE_STRUCTURE = [
 ];
 
 let state = {
-    balance: 10000000000000, // 10,000 Tỷ đồng mặc định để mua vé không giới hạn
+    balance: 500000,        // Khởi tạo mặc định 500,000đ
     selectedProvince: 'tphcm',
-    drawProvince: 'all', // 'all' or specific province key
-    totalPendingTickets: 0, // Lưu trữ chính xác số lượng vé chờ dò (hàng triệu, hàng trăm triệu vé)
-    totalCheckedTickets: 0, // Số vé đã dò trong kỳ gần nhất
-    totalBought: 0,         // Tổng số vé đã mua lũy kế
-    tickets: [],            // Danh sách vé mẫu hiển thị UI (tối đa 50 vé để không bao giờ lag DOM)
+    drawProvince: 'all',    // 'all' or specific province key
+    totalPendingTickets: 0, // Số vé chờ dò (hỗ trợ cộng dồn hàng trăm triệu vé)
+    totalCheckedTickets: 0, // Số vé đã dò tích lũy
+    totalBought: 0,         // Tổng số vé đã mua tích lũy
+    tickets: [],            // Vé mẫu đại diện hiển thị (tối đa 50 vé để 120 FPS không giật lag)
     draws: [],              // Danh sách các kỳ quay số đã mở
-    totalSpent: 0,          // Tổng số tiền đã chi
-    totalWon: 0,            // Tổng số tiền đã thắng
+    totalSpent: 0,          // Tổng số tiền đã mua vé
+    totalWon: 0,            // Tổng số tiền đã thắng giải
     winCount: 0,            // Tổng số vé đã trúng
 };
 
 // ============ INDEXEDDB PERSISTENCE ============
 const DB_NAME = 'XSKT_LOTTERY_DB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'lottery_store';
 let idb = null;
 
@@ -93,13 +93,15 @@ function rehydrateTickets(rawTickets) {
 
 function loadStateFromLocalStorage() {
     try {
-        const saved = localStorage.getItem('xskt_state_v2');
+        const saved = localStorage.getItem('xskt_state_v3');
         if (saved) {
             const parsed = JSON.parse(saved);
             state = { ...state, ...parsed };
             if (!state.drawProvince) state.drawProvince = 'all';
-            if (!state.balance || state.balance < 1000000000) {
-                state.balance = 10000000000000;
+            if (typeof parsed.balance === 'number' && !isNaN(parsed.balance)) {
+                state.balance = parsed.balance;
+            } else {
+                state.balance = 500000;
             }
             if (Array.isArray(state.tickets)) {
                 state.tickets = rehydrateTickets(state.tickets);
@@ -118,15 +120,15 @@ async function loadState() {
         try {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
-            const req = store.get('xskt_full_state');
+            const req = store.get('xskt_full_state_v3');
             req.onsuccess = () => {
                 if (req.result) {
                     state = { ...state, ...req.result };
+                    if (typeof req.result.balance === 'number' && !isNaN(req.result.balance)) {
+                        state.balance = req.result.balance;
+                    }
                     state.tickets = rehydrateTickets(state.tickets);
                     if (!state.drawProvince) state.drawProvince = 'all';
-                    if (!state.balance || state.balance < 1000000000) {
-                        state.balance = 10000000000000;
-                    }
                     updateBalanceDisplay();
                     updateStats();
                     renderTickets();
@@ -145,7 +147,7 @@ function saveState() {
         try {
             const tx = idb.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
-            store.put(state, 'xskt_full_state');
+            store.put(state, 'xskt_full_state_v3');
         } catch (e) {
             console.warn('IndexedDB write error:', e);
         }
@@ -178,7 +180,7 @@ function saveState() {
             tickets: sampleTickets,
         };
         
-        localStorage.setItem('xskt_state_v2', JSON.stringify(toSave));
+        localStorage.setItem('xskt_state_v3', JSON.stringify(toSave));
     } catch (e) {}
 }
 
@@ -429,7 +431,7 @@ function updateTicketPreview() {
     }
 }
 
-// ============ BUYING TICKETS (CUMULATIVE & UNLIMITED) ============
+// ============ BUYING TICKETS (ACCURATE BALANCE & CUMULATIVE) ============
 function buyTicket() {
     const number = getEnteredNumber();
     
@@ -438,10 +440,14 @@ function buyTicket() {
         return;
     }
     
+    // Kiểm tra số dư chính xác
     if (state.balance < TICKET_PRICE) {
-        state.balance += 1000000000;
+        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(TICKET_PRICE)} để mua 1 vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Vui lòng nạp thêm tiền!`, 'error');
+        openDepositModal();
+        return;
     }
     
+    // Trừ tiền chính xác
     state.balance -= TICKET_PRICE;
     state.totalSpent += TICKET_PRICE;
     state.totalBought = (state.totalBought || 0) + 1;
@@ -468,7 +474,7 @@ function buyTicket() {
     renderDrawProvinceChips();
     
     const totalPending = getPendingCount();
-    showToast('🎫', `Đã mua vé ${number}! Hiện đang có tổng cộng ${totalPending.toLocaleString('vi-VN')} vé chờ dò.`, 'success');
+    showToast('🎫', `Đã mua vé ${number}! Tổng số vé đang chờ dò: ${totalPending.toLocaleString('vi-VN')}. Số dư còn lại: ${formatCurrency(state.balance)}`, 'success');
     
     clearNumber();
 }
@@ -478,11 +484,14 @@ function quickBuy(count) {
     
     const totalCost = count * TICKET_PRICE;
     
-    // Tự động cấp thêm số dư nếu mua số lượng lớn để trải nghiệm mượt mà không bị ngắt quãng
+    // Kiểm tra số dư chính xác tuyệt đối
     if (state.balance < totalCost) {
-        state.balance = totalCost + 1000000000000;
+        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(totalCost)} để mua ${count.toLocaleString('vi-VN')} vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Vui lòng nạp thêm tiền!`, 'error');
+        openDepositModal();
+        return;
     }
     
+    // Trừ tiền và cộng dồn số vé
     state.balance -= totalCost;
     state.totalSpent += totalCost;
     state.totalBought = (state.totalBought || 0) + count;
@@ -519,7 +528,7 @@ function quickBuy(count) {
     renderDrawProvinceChips();
     
     const totalPending = getPendingCount();
-    showToast('🎫', `Đã mua thêm +${count.toLocaleString('vi-VN')} vé (${provName})! Tổng cộng đang có ${totalPending.toLocaleString('vi-VN')} vé chờ dò.`, 'success');
+    showToast('🎫', `Đã mua thêm +${count.toLocaleString('vi-VN')} vé (${provName})! Tổng cộng đang có ${totalPending.toLocaleString('vi-VN')} vé chờ dò. Số dư còn: ${formatCurrency(state.balance)}`, 'success');
 }
 
 function customQuickBuy() {
@@ -684,7 +693,13 @@ function startDraw(isFast = false) {
         state.totalCheckedTickets = (state.totalCheckedTickets || 0) + totalPendingToCheck;
         state.totalPendingTickets = 0; // Hoàn thành dò 100% tất cả các vé
         
+        // Cộng tiền thắng vào số dư
+        if (totalWinThisDraw > 0) {
+            state.balance += totalWinThisDraw;
+        }
+        
         saveState();
+        updateBalanceDisplay();
         updateStats();
         renderDrawProvinceChips();
         updateCheckerDrawOptions();
@@ -694,10 +709,6 @@ function startDraw(isFast = false) {
         
         // Thưởng & thông báo
         if (totalWinThisDraw > 0) {
-            state.balance += totalWinThisDraw;
-            saveState();
-            updateBalanceDisplay();
-            
             setTimeout(() => {
                 showWinNotification(winDetails, totalWinThisDraw, totalPendingToCheck, wonTicketsCount, prizeBreakdown);
                 launchConfetti();
@@ -1171,7 +1182,7 @@ function checkAllTickets() {
     startDraw(true);
 }
 
-// ============ BALANCE & DEPOSIT ============
+// ============ BALANCE & DEPOSIT (100% PRECISE ACCUMULATION) ============
 function updateBalanceDisplay() {
     const display = document.getElementById('balance-display');
     if (display) {
@@ -1186,7 +1197,10 @@ function openDepositModal() {
     if (modal) {
         modal.style.display = 'flex';
         const input = document.getElementById('custom-amount');
-        if (input) input.focus();
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
     }
 }
 
@@ -1201,18 +1215,20 @@ function closeDepositModal(event) {
 }
 
 function deposit(amount) {
-    if (typeof amount !== 'number' || amount <= 0) return;
-    state.balance += amount;
+    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
+    state.balance = (state.balance || 0) + amount;
     saveState();
     updateBalanceDisplay();
+    updateStats();
     closeDepositModal();
-    showToast('💰', `Đã nạp thành công +${formatCurrency(amount)} vào tài khoản!`, 'success');
+    showToast('💰', `Đã nạp thành công +${formatCurrency(amount)}! Số dư hiện tại: ${formatCurrency(state.balance)}`, 'success');
 }
 
 function depositCustom() {
     const input = document.getElementById('custom-amount');
     if (!input) return;
-    const amount = parseInt(input.value);
+    const rawVal = input.value.replace(/\D/g, '');
+    const amount = parseInt(rawVal);
     if (isNaN(amount) || amount < 10000) {
         showToast('⚠️', 'Vui lòng nhập số tiền nạp hợp lệ (tối thiểu 10,000đ).', 'error');
         return;
