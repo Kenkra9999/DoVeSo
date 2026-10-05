@@ -3361,37 +3361,187 @@ body::before {
     border-top: 1px dashed rgba(255, 255, 255, 0.1);
     padding-top: 10px;
 }
-.btn-manual-toggle {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 0;
-    transition: color 0.2s;
-}
-.btn-manual-toggle:hover {
-    color: #F0B90B;
-}
-.manual-paste-box {
-    margin-top: 8px;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+/* ---- Account ID Display Card & Direct Transfer UI ---- */
+.account-card-box {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 78, 59, 0.25));
+    border: 1.5px solid rgba(16, 185, 129, 0.45);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 0 15px rgba(16, 185, 129, 0.08);
+    position: relative;
 }
 
-@media (max-width: 600px) {
-    .rc-actions-grid {
-        grid-template-columns: 1fr;
+.acc-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #10b981;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.acc-id-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+.acc-id-text {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: 2px;
+    font-family: monospace;
+    user-select: all;
+}
+
+.btn-copy-acc {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-copy-acc:hover {
+    background: linear-gradient(135deg, #34d399, #059669);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.acc-live-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #a7f3d0;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: fc-pulse-anim 1.5s infinite;
+}
+
+.acc-note {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin-top: 8px;
+}
+
+/* Transfer form elements */
+.input-field-wrap {
+    margin-bottom: 14px;
+}
+
+.field-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.btn-transfer-submit {
+    width: 100%;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    border-radius: var(--radius-md);
+    color: #0a0a1a;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35);
+}
+
+.btn-transfer-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.55);
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+}
+
+.btn-transfer-submit:active {
+    transform: scale(0.97);
+}
+
+.header-acc-badge {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: var(--radius-md);
+    padding: 6px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.header-acc-badge:hover {
+    background: rgba(16, 185, 129, 0.22);
+    border-color: #10b981;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.header-acc-label {
+    font-size: 0.65rem;
+    color: #10b981;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.header-acc-val {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #ffd700;
+    font-family: monospace;
+}
+
+@media (max-width: 768px) {
+    .header-inner {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
     }
-    .rc-code-text {
-        font-size: 1.15rem;
-        letter-spacing: 1.5px;
+    .balance-section {
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .header-acc-badge {
+        flex: 1 1 100%;
+        text-align: center;
+        align-items: center;
+    }
+    .btn-header-receive, .btn-header-create {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 0.82rem;
     }
 }
 
