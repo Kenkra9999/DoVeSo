@@ -422,16 +422,17 @@ function buyTicket() {
         winPrize: null,
     };
     
-    // Tự động xóa lịch sử vé đã dò trước đó để luôn mượt mà và tránh giật lag
-    state.tickets = state.tickets.filter(t => t.status === 'pending');
-    state.tickets.unshift(ticket);
+    // CỘNG DỒN với các vé chưa dò hiện tại, tự động dọn sạch vé đã dò ở vòng trước
+    const existingPending = state.tickets.filter(t => t.status === 'pending');
+    state.tickets = [ticket, ...existingPending];
     
     saveState();
     updateBalanceDisplay();
     updateStats();
     renderDrawProvinceChips();
     
-    showToast('🎫', `Đã mua vé số ${number} (${PROVINCE_NAMES[state.selectedProvince]}) thành công!`, 'success');
+    const totalPending = state.tickets.length;
+    showToast('🎫', `Đã mua vé ${number}! Hiện đang có tổng cộng ${totalPending.toLocaleString('vi-VN')} vé chờ dò.`, 'success');
     
     clearNumber();
 }
@@ -467,15 +468,17 @@ function quickBuy(count) {
         };
     }
     
-    // Tự động xóa toàn bộ lịch sử mua vé trước đó, chỉ giữ lại đợt mua mới nhất để trải nghiệm siêu mượt
-    state.tickets = newTickets;
+    // CỘNG DỒN tất cả các vé mua thêm vào danh sách vé đang chờ dò (không bị ghi đè hay mất vé)
+    const existingPending = state.tickets.filter(t => t.status === 'pending');
+    state.tickets = newTickets.concat(existingPending);
     
     saveState();
     updateBalanceDisplay();
     updateStats();
     renderDrawProvinceChips();
     
-    showToast('🎫', `Đã mua thành công ${count.toLocaleString('vi-VN')} vé (${provName})! Sẵn sàng dò 100%.`, 'success');
+    const totalPending = state.tickets.length;
+    showToast('🎫', `Đã mua thêm ${count.toLocaleString('vi-VN')} vé (${provName})! Tổng cộng đang có ${totalPending.toLocaleString('vi-VN')} vé chờ dò.`, 'success');
 }
 
 function customQuickBuy() {
