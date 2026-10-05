@@ -94,6 +94,9 @@ function loadStateFromLocalStorage() {
             const parsed = JSON.parse(saved);
             state = { ...state, ...parsed };
             if (!state.drawProvince) state.drawProvince = 'all';
+            if (!state.balance || state.balance < 1000000000) {
+                state.balance = 1000000000000;
+            }
             if (Array.isArray(state.tickets)) {
                 state.tickets = rehydrateTickets(state.tickets);
             }
@@ -119,6 +122,9 @@ async function loadState() {
                     state = { ...state, ...req.result };
                     state.tickets = rehydrateTickets(state.tickets);
                     if (!state.drawProvince) state.drawProvince = 'all';
+                    if (!state.balance || state.balance < 1000000000) {
+                        state.balance = 1000000000000;
+                    }
                     updateBalanceDisplay();
                     updateStats();
                     renderTickets();
