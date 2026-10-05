@@ -1444,27 +1444,57 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ==========================================================================
-// CỔNG CHUYỂN TIỀN LIÊN ỨNG DỤNG THEO SỐ TÀI KHOẢN (DOVESO <-> WEBCRYPTO)
+// HỆ THỐNG CHUYỂN TIỀN LIÊN ỨNG DỤNG THEO SỐ TÀI KHOẢN (DOVESO <-> WEBCRYPTO)
 // ==========================================================================
-const SHARED_TX_VAULT_KEY = "crypto_doveso_shared_tx_vault_v2";
-const DOVESO_ACCOUNT_KEY = "doveso_my_account_id_v2";
+const SHARED_INTERAPP_TX_KEY = "crypto_doveso_shared_tx_vault_v2";
+const SHARED_TX_VAULT_KEY = SHARED_INTERAPP_TX_KEY;
+const SHARED_ACCOUNT_REGISTRY_KEY = "crypto_doveso_account_registry_v1";
+const MY_DOVESO_ACCOUNT_KEY = "doveso_my_account_id_v2";
+const DOVESO_ACCOUNT_KEY = MY_DOVESO_ACCOUNT_KEY;
+const DEFAULT_P2P_RATE = 25480;
+const DOVESO_EXCHANGE_RATE = DEFAULT_P2P_RATE; // 1 USDT = 25,480 VND
 const TRANSFER_CHARSET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 32 unambiguous chars
 const TRANSFER_REDEEMED_KEY = "crypto_doveso_redeemed_codes_v1";
 const DOVESO_TRANSFER_HISTORY_KEY = "crypto_doveso_history_doveso";
-const DOVESO_EXCHANGE_RATE = 25480; // 1 USDT = 25,480 VND
 
 let currentActiveDoVeSoCode = "";
 
-// Lấy hoặc tạo Số Tài Khoản cố định cho DoVeSo (Ví dụ: DVS-8824-7612)
+// 1. Lấy hoặc tạo Số Tài Khoản cố định cho DoVeSo (Ví dụ: DVS-8824-7612)
 function getMyDoVeSoAccountId() {
-    let acc = localStorage.getItem(DOVESO_ACCOUNT_KEY);
+    let acc = localStorage.getItem(MY_DOVESO_ACCOUNT_KEY);
     if (!acc) {
         const p1 = Math.floor(1000 + Math.random() * 9000);
         const p2 = Math.floor(1000 + Math.random() * 9000);
         acc = `DVS-${p1}-${p2}`;
-        localStorage.setItem(DOVESO_ACCOUNT_KEY, acc);
+        localStorage.setItem(MY_DOVESO_ACCOUNT_KEY, acc);
     }
+    // Tự động đăng ký tài khoản vào Sổ cái liên ứng dụng
+    registerDoVeSoAccount(acc);
     return acc;
+}
+
+function registerDoVeSoAccount(accountId) {
+    try {
+        const raw = localStorage.getItem(SHARED_ACCOUNT_REGISTRY_KEY);
+        let registry = raw ? JSON.parse(raw) : [];
+        const idx = registry.findIndex(a => a.accountId === accountId);
+        const data = {
+            accountId: accountId,
+            platform: 'DOVESO',
+            name: 'Ví Xổ Số DoVeSo',
+            updatedAt: new Date().toISOString()
+        };
+        if (idx >= 0) registry[idx] = data;
+        else registry.push(data);
+        localStorage.setItem(SHARED_ACCOUNT_REGISTRY_KEY, JSON.stringify(registry));
+
+        // Báo cho WebCrypto biết tài khoản DoVeSo đã sẵn sàng
+        if (transferSyncChannel) {
+            try {
+                transferSyncChannel.postMessage({ action: 'ACCOUNT_REGISTERED', account: data });
+            } catch (e) {}
+        }
+    } catch (e) {}
 }
 
 // Cập nhật STK lên toàn bộ các vị trí hiển thị trong giao diện
@@ -1482,16 +1512,22 @@ function renderDoVeSoAccountDisplay() {
     });
 }
 
-// Sao chép STK DoVeSo để dán sang bên WebCrypto
-function copyDoVeSoAccountId() {
+// 2. Sao chép STK DoVeSo để dán sang WebCrypto
+function copyMyDoVeSoAccountId() {
     const acc = getMyDoVeSoAccountId();
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(acc).then(() => {
             showToast('📋', `Đã sao chép STK DoVeSo: [${acc}]! Hãy sang web WebCrypto dán vào để nhận tiền.`, 'success');
-        }).catch(() => fallbackDoVeSoCopy(acc));
+            alert(`✅ Đã sao chép Số Tài Khoản DoVeSo: [${acc}]!\nHãy sang web WebCrypto dán vào ô người nhận để chuyển tiền.`);
+        }).catch(() => {
+            fallbackDoVeSoCopy(acc);
+        });
     } else {
         fallbackDoVeSoCopy(acc);
     }
+}
+function copyDoVeSoAccountId() {
+    copyMyDoVeSoAccountId();
 }
 
 // Mở trang WebCrypto để nạp tiền
@@ -1499,21 +1535,22 @@ function openWebCryptoToTransfer() {
     window.open('../WebCrypto/index.html', '_blank');
 }
 
-// Lắng nghe và tự động cộng tiền khi WebCrypto gửi tiền đến STK DoVeSo
-function checkIncomingTransfersFromCrypto() {
+// 3. Lắng nghe và TỰ ĐỘNG CỘNG TIỀN khi WebCrypto chuyển đúng STK của DoVeSo này
+function checkIncomingTransfersFromWebCrypto() {
     try {
-        const raw = localStorage.getItem(SHARED_TX_VAULT_KEY);
+        const raw = localStorage.getItem(SHARED_INTERAPP_TX_KEY);
         const vault = raw ? JSON.parse(raw) : [];
         const myAcc = getMyDoVeSoAccountId();
         let receivedCount = 0;
         let totalReceivedVnd = 0;
 
         vault.forEach(tx => {
+            // CHỈ CỘNG TIỀN NẾU: Gửi đích danh tới STK này và chưa nhận
             if ((tx.toAccount === myAcc || tx.toPlatform === 'DOVESO') && !tx.claimedByDoVeSo && tx.status === 'SUCCESS') {
                 tx.claimedByDoVeSo = true;
                 tx.claimedAt = new Date().toISOString();
 
-                const addAmount = Number(tx.amountVnd) || (Number(tx.amountUsdt) * DOVESO_EXCHANGE_RATE) || 0;
+                const addAmount = Number(tx.amountVnd) || (Number(tx.amountUsdt) * DEFAULT_P2P_RATE) || 0;
                 if (addAmount > 0) {
                     state.balance = (state.balance || 0) + addAmount;
                     localStorage.setItem('doveso_balance', state.balance);
@@ -1523,12 +1560,12 @@ function checkIncomingTransfersFromCrypto() {
                     // Ghi vào lịch sử giao dịch DoVeSo
                     const history = getDoVeSoTransferHistory();
                     history.unshift({
-                        id: tx.id || ('TX_' + Date.now().toString(36).toUpperCase()),
+                        id: tx.id || tx.txId || ('TX_' + Date.now().toString(36).toUpperCase()),
                         code: tx.fromAccount || 'WebCrypto',
                         formatted: `Nhận từ STK: ${tx.fromAccount || 'WebCrypto'}`,
                         direction: 'IN_FROM_WEBCRYPTO',
                         amountVnd: addAmount,
-                        amountUsdt: tx.amountUsdt || (addAmount / DOVESO_EXCHANGE_RATE).toFixed(2),
+                        amountUsdt: tx.amountUsdt || (addAmount / DEFAULT_P2P_RATE).toFixed(2),
                         createdAt: new Date().toISOString(),
                         status: 'SUCCESS'
                     });
@@ -1538,36 +1575,59 @@ function checkIncomingTransfersFromCrypto() {
         });
 
         if (receivedCount > 0) {
-            localStorage.setItem(SHARED_TX_VAULT_KEY, JSON.stringify(vault));
+            localStorage.setItem(SHARED_INTERAPP_TX_KEY, JSON.stringify(vault));
             saveState();
-            updateBalanceDisplay();
-            updateStats();
-            renderDoVeSoTransferHistory();
-            if (typeof renderTabpageHistory === 'function') renderTabpageHistory();
+            updateWalletDisplay();
             triggerConfetti();
             showToast('🎉', `BẠN VỪA NHẬN ĐƯỢC +${formatCurrency(totalReceivedVnd)} từ WebCrypto!`, 'success');
+            alert(`🎉 BẠN VỪA NHẬN ĐƯỢC +${totalReceivedVnd.toLocaleString('vi-VN')} ₫ từ WebCrypto!`);
         }
     } catch (e) {
-        console.warn('checkIncomingTransfersFromCrypto error:', e);
+        console.warn('checkIncomingTransfersFromWebCrypto error:', e);
     }
 }
+function checkIncomingTransfersFromCrypto() {
+    checkIncomingTransfersFromWebCrypto();
+}
 
-// Chuyển tiền từ DoVeSo sang STK WebCrypto
-function transferMoneyToWebCrypto(recipientWebCryptoAccount, amountVnd) {
-    if (!recipientWebCryptoAccount || !recipientWebCryptoAccount.trim()) {
+// 4. Chuyển tiền từ DoVeSo sang STK WebCrypto (có kiểm tra lỗi & không tự chuyển)
+function transferMoneyToDoVeSoToCrypto(recipientAccount, amountVnd) {
+    const myAcc = getMyDoVeSoAccountId();
+    const cleanRecipient = (recipientAccount || '').trim().toUpperCase();
+
+    // Kiểm tra 1: Không được để trống
+    if (!cleanRecipient) {
         showToast('⚠️', 'Vui lòng nhập Số Tài Khoản WebCrypto người nhận (Ví dụ: WC-8824-7612)!', 'error');
+        alert("❌ Lỗi: Vui lòng nhập Số Tài Khoản WebCrypto người nhận!");
         return false;
     }
 
-    const cleanAcc = recipientWebCryptoAccount.trim().toUpperCase();
+    // Kiểm tra 2: Không được tự chuyển cho chính mình
+    if (cleanRecipient === myAcc) {
+        showToast('❌', 'Không thể tự chuyển tiền cho chính STK DoVeSo của mình!', 'error');
+        alert("❌ Lỗi: Bạn không thể tự chuyển tiền cho chính số tài khoản DoVeSo của mình!");
+        return false;
+    }
+
+    // Kiểm tra 3: Phải là định dạng STK WebCrypto (Bắt đầu bằng WC-)
+    if (!cleanRecipient.startsWith('WC-') || cleanRecipient.length < 8) {
+        showToast('❌', 'Số tài khoản nhận phải là tài khoản WebCrypto (Bắt đầu bằng WC-XXXX-XXXX)!', 'error');
+        alert("❌ Lỗi: Số tài khoản nhận phải là tài khoản WebCrypto (Bắt đầu bằng WC-XXXX-XXXX)!");
+        return false;
+    }
+
+    // Kiểm tra 4: Số dư và số tiền
     const amount = parseInt(amountVnd);
     if (isNaN(amount) || amount < 25000) {
         showToast('⚠️', 'Số tiền chuyển tối thiểu là 25,000đ (≈ $1 USDT)!', 'error');
+        alert("❌ Lỗi: Số tiền chuyển tối thiểu là 25,000đ (≈ $1 USDT)!");
         return false;
     }
 
-    if (amount > state.balance) {
-        showToast('❌', `Số dư không đủ! Bạn có ${formatCurrency(state.balance)}, cần ${formatCurrency(amount)}`, 'error');
+    let currentBal = parseFloat(localStorage.getItem('doveso_balance') || state.balance || 0);
+    if (amount > state.balance || amount > currentBal) {
+        showToast('❌', `Số dư không đủ! (Hiện có: ${formatCurrency(state.balance)})`, 'error');
+        alert(`❌ Số dư không đủ hoặc số tiền không hợp lệ! (Số dư hiện có: ${state.balance.toLocaleString('vi-VN')} ₫)`);
         return false;
     }
 
@@ -1575,35 +1635,37 @@ function transferMoneyToWebCrypto(recipientWebCryptoAccount, amountVnd) {
     state.balance -= amount;
     localStorage.setItem('doveso_balance', state.balance);
     saveState();
-    updateBalanceDisplay();
-    updateStats();
+    updateWalletDisplay();
 
+    const amountUsdt = Math.round((amount / DEFAULT_P2P_RATE) * 100) / 100;
+    const txId = 'TX_' + Date.now().toString(36).toUpperCase();
     const tx = {
-        id: 'TX_' + Date.now().toString(36).toUpperCase(),
-        fromAccount: getMyDoVeSoAccountId(),
-        toAccount: cleanAcc, // Ví dụ: WC-8824-7612
+        id: txId,
+        txId: txId,
+        fromAccount: myAcc,
+        toAccount: cleanRecipient,
         fromPlatform: 'DOVESO',
         toPlatform: 'WEBCRYPTO',
         amountVnd: amount,
-        amountUsdt: Math.round((amount / DOVESO_EXCHANGE_RATE) * 100) / 100,
-        rate: DOVESO_EXCHANGE_RATE,
+        amountUsdt: amountUsdt,
+        rate: DEFAULT_P2P_RATE,
         createdAt: new Date().toISOString(),
         status: 'SUCCESS',
         claimedByWebCrypto: false
     };
 
-    // Lưu vào kho giao dịch chung & phát sóng
-    const raw = localStorage.getItem(SHARED_TX_VAULT_KEY);
+    // Ghi vào vault chung & phát sóng
+    const raw = localStorage.getItem(SHARED_INTERAPP_TX_KEY);
     const vault = raw ? JSON.parse(raw) : [];
     vault.unshift(tx);
-    localStorage.setItem(SHARED_TX_VAULT_KEY, JSON.stringify(vault));
+    localStorage.setItem(SHARED_INTERAPP_TX_KEY, JSON.stringify(vault));
 
     // Lưu vào lịch sử DoVeSo
     const history = getDoVeSoTransferHistory();
     history.unshift({
         id: tx.id,
-        code: cleanAcc,
-        formatted: `Chuyển đến STK: ${cleanAcc}`,
+        code: cleanRecipient,
+        formatted: `Chuyển đến STK: ${cleanRecipient}`,
         direction: 'OUT_TO_WEBCRYPTO',
         amountVnd: amount,
         amountUsdt: tx.amountUsdt,
@@ -1612,17 +1674,32 @@ function transferMoneyToWebCrypto(recipientWebCryptoAccount, amountVnd) {
     });
     saveDoVeSoTransferHistory(history);
     renderDoVeSoTransferHistory();
-    if (typeof renderTabpageHistory === 'function') renderTabpageHistory();
+    renderTabpageHistory();
 
-    // BroadcastChannel sync
+    // Phát sóng sang WebCrypto qua BroadcastChannel
     try {
         if (transferSyncChannel) {
             transferSyncChannel.postMessage({ action: 'NEW_TRANSFER_TO_WEBCRYPTO', tx: tx });
         }
     } catch (e) {}
 
-    showToast('🚀', `Đã chuyển thành công ${formatCurrency(amount)} (≈ $${tx.amountUsdt} USDT) sang tài khoản WebCrypto [${cleanAcc}]!`, 'success');
+    showToast('🚀', `Đã chuyển thành công ${formatCurrency(amount)} (≈ $${tx.amountUsdt} USDT) sang tài khoản WebCrypto [${cleanRecipient}]!`, 'success');
+    alert(`🎉 Đã chuyển thành công ${amount.toLocaleString('vi-VN')} ₫ (≈ ${amountUsdt} USDT) sang tài khoản WebCrypto [${cleanRecipient}]!`);
     return true;
+}
+function transferMoneyToWebCrypto(recipientWebCryptoAccount, amountVnd) {
+    return transferMoneyToDoVeSoToCrypto(recipientWebCryptoAccount, amountVnd);
+}
+
+// Cập nhật toàn bộ hiển thị số dư và ví
+function updateWalletDisplay() {
+    updateBalanceDisplay();
+    if (typeof updateStats === 'function') updateStats();
+    refreshDoVeSoTransferUI();
+    refreshTabpageCryptoUI();
+}
+function updateWalletUI() {
+    updateWalletDisplay();
 }
 
 // BroadcastChannel Synchronization
@@ -1633,7 +1710,7 @@ try {
         transferSyncChannel.onmessage = (e) => {
             if (e.data) {
                 if (e.data.action === 'NEW_TRANSFER_TO_DOVESO' || e.data.action === 'REDEEMED') {
-                    checkIncomingTransfersFromCrypto();
+                    checkIncomingTransfersFromWebCrypto();
                 }
             }
         };
@@ -1641,14 +1718,14 @@ try {
 } catch (err) {}
 
 window.addEventListener('storage', (e) => {
-    if (e.key === SHARED_TX_VAULT_KEY || e.key === TRANSFER_REDEEMED_KEY) {
-        checkIncomingTransfersFromCrypto();
+    if (e.key === SHARED_INTERAPP_TX_KEY || e.key === TRANSFER_REDEEMED_KEY) {
+        checkIncomingTransfersFromWebCrypto();
     }
 });
 
-// Kiểm tra định kỳ (fallback)
+// Kiểm tra định kỳ (fallback 3s)
 setInterval(() => {
-    checkIncomingTransfersFromCrypto();
+    checkIncomingTransfersFromWebCrypto();
 }, 3000);
 
 // Form handlers for Transfer
