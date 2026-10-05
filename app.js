@@ -1,5 +1,5 @@
 /* ========================================
-   XỔ SỐ KIẾN THIẾT VIỆT NAM - App Logic v4.0.0
+   XỔ SỐ KIẾN THIẾT VIỆT NAM - App Logic v4.1.0
    Precision Balance & 100M+ Tickets Engine
    ======================================== */
 
@@ -442,8 +442,7 @@ function buyTicket() {
     
     // Kiểm tra số dư chính xác
     if (state.balance < TICKET_PRICE) {
-        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(TICKET_PRICE)} để mua 1 vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Vui lòng nạp thêm tiền!`, 'error');
-        openDepositModal();
+        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(TICKET_PRICE)} để mua 1 vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Hãy bấm nút "Nạp Tiền" ở trên nếu muốn nạp thêm!`, 'error');
         return;
     }
     
@@ -486,8 +485,7 @@ function quickBuy(count) {
     
     // Kiểm tra số dư chính xác tuyệt đối
     if (state.balance < totalCost) {
-        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(totalCost)} để mua ${count.toLocaleString('vi-VN')} vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Vui lòng nạp thêm tiền!`, 'error');
-        openDepositModal();
+        showToast('⚠️', `Số dư không đủ! Cần ${formatCurrency(totalCost)} để mua ${count.toLocaleString('vi-VN')} vé (Số dư hiện tại: ${formatCurrency(state.balance)}). Hãy bấm nút "Nạp Tiền" ở trên nếu muốn nạp thêm!`, 'error');
         return;
     }
     
