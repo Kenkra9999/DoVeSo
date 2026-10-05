@@ -31,7 +31,7 @@ const PRIZE_STRUCTURE = [
 ];
 
 let state = {
-    balance: 500000,
+    balance: 1000000000000, // 1,000 Tỷ đồng mặc định để mua vé không giới hạn
     selectedProvince: 'tphcm',
     drawProvince: 'all', // 'all' or specific province key
     tickets: [],       // { id, number, province, date, drawId, status, winnings, winPrize }
@@ -115,7 +115,7 @@ async function loadState() {
             const store = tx.objectStore(STORE_NAME);
             const req = store.get('xskt_full_state');
             req.onsuccess = () => {
-                if (req.result && Array.isArray(req.result.tickets) && req.result.tickets.length > state.tickets.length) {
+                if (req.result && Array.isArray(req.result.tickets)) {
                     state = { ...state, ...req.result };
                     state.tickets = rehydrateTickets(state.tickets);
                     if (!state.drawProvince) state.drawProvince = 'all';
@@ -402,8 +402,7 @@ function buyTicket() {
     }
     
     if (state.balance < TICKET_PRICE) {
-        showToast('💸', 'Số dư không đủ! Vui lòng nạp thêm tiền.', 'error');
-        return;
+        state.balance += 1000000000;
     }
     
     // Deduct balance
@@ -440,9 +439,9 @@ function buyTicket() {
 function quickBuy(count) {
     const totalCost = count * TICKET_PRICE;
     
+    // Tự động cấp thêm vốn nếu số dư không đủ để mua thoải mái mọi số lượng vé
     if (state.balance < totalCost) {
-        showToast('💸', `Cần ${formatCurrency(totalCost)} nhưng số dư chỉ còn ${formatCurrency(state.balance)}!`, 'error');
-        return;
+        state.balance = totalCost + 100000000000;
     }
     
     state.balance -= totalCost;
@@ -476,7 +475,7 @@ function quickBuy(count) {
     updateStats();
     renderDrawProvinceChips();
     
-    showToast('🎫', `Đã mua ${count.toLocaleString('vi-VN')} vé (${provName})! (Tự động làm mới danh sách)`, 'success');
+    showToast('🎫', `Đã mua thành công ${count.toLocaleString('vi-VN')} vé (${provName})! Sẵn sàng dò 100%.`, 'success');
 }
 
 function customQuickBuy() {
@@ -509,7 +508,7 @@ function generateDrawResults() {
 function startDraw(isFast = false) {
     const drawProvKey = state.drawProvince || 'all';
     
-    // Find pending tickets that will be checked in this draw
+    // Find pending tickets that will be checked in this draw (luôn dò 100% tất cả các vé chưa dò)
     let pendingTicketsToCheck;
     let targetProvinceKey;
     let targetProvinceName;
@@ -520,13 +519,19 @@ function startDraw(isFast = false) {
         targetProvinceName = 'Tất Cả Các Đài';
     } else {
         pendingTicketsToCheck = state.tickets.filter(t => t.status === 'pending' && t.province === drawProvKey);
-        targetProvinceKey = drawProvKey;
-        targetProvinceName = PROVINCE_NAMES[drawProvKey] || 'Đài Xổ Số';
+        if (pendingTicketsToCheck.length === 0 && state.tickets.some(t => t.status === 'pending')) {
+            pendingTicketsToCheck = state.tickets.filter(t => t.status === 'pending');
+            targetProvinceKey = 'all';
+            targetProvinceName = 'Tất Cả Các Đài';
+            state.drawProvince = 'all';
+        } else {
+            targetProvinceKey = drawProvKey;
+            targetProvinceName = PROVINCE_NAMES[drawProvKey] || 'Đài Xổ Số';
+        }
     }
     
     if (pendingTicketsToCheck.length === 0) {
-        const provMsg = drawProvKey === 'all' ? '' : ` của đài ${targetProvinceName}`;
-        showToast('⚠️', `Bạn chưa có vé nào chưa dò${provMsg}! Hãy mua vé trước.`, 'error');
+        showToast('⚠️', `Bạn chưa có vé nào chưa dò! Hãy mua vé trước.`, 'error');
         return;
     }
     
