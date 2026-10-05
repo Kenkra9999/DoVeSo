@@ -1,5 +1,5 @@
 /* ========================================
-   XỔ SỐ KIẾN THIẾT VIỆT NAM - App Logic v2.3.0
+   XỔ SỐ KIẾN THIẾT VIỆT NAM - App Logic v4.0.0
    Precision Balance & 100M+ Tickets Engine
    ======================================== */
 
@@ -47,7 +47,7 @@ let state = {
 
 // ============ INDEXEDDB PERSISTENCE ============
 const DB_NAME = 'XSKT_LOTTERY_DB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_NAME = 'lottery_store';
 let idb = null;
 
@@ -93,7 +93,7 @@ function rehydrateTickets(rawTickets) {
 
 function loadStateFromLocalStorage() {
     try {
-        const saved = localStorage.getItem('xskt_state_v3');
+        const saved = localStorage.getItem('xskt_state_v4');
         if (saved) {
             const parsed = JSON.parse(saved);
             state = { ...state, ...parsed };
@@ -120,7 +120,7 @@ async function loadState() {
         try {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
-            const req = store.get('xskt_full_state_v3');
+            const req = store.get('xskt_full_state_v4');
             req.onsuccess = () => {
                 if (req.result) {
                     state = { ...state, ...req.result };
@@ -147,7 +147,7 @@ function saveState() {
         try {
             const tx = idb.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
-            store.put(state, 'xskt_full_state_v3');
+            store.put(state, 'xskt_full_state_v4');
         } catch (e) {
             console.warn('IndexedDB write error:', e);
         }
@@ -180,7 +180,7 @@ function saveState() {
             tickets: sampleTickets,
         };
         
-        localStorage.setItem('xskt_state_v3', JSON.stringify(toSave));
+        localStorage.setItem('xskt_state_v4', JSON.stringify(toSave));
     } catch (e) {}
 }
 
