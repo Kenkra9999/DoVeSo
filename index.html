@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xổ Số Kiến Thiết Việt Nam - Mua Vé & Dò Kết Quả</title>
+    <meta name="description" content="Ứng dụng mua vé số kiến thiết Việt Nam trực tuyến. Mua vé, quay số, dò kết quả xổ số miền Nam nhanh chóng và chính xác.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Floating Particles Background -->
+    <div id="particles-bg"></div>
+
+    <!-- Confetti Container -->
+    <div id="confetti-container"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <span class="logo-ball">🎱</span>
+                </div>
+                <div class="logo-text">
+                    <h1>XỔ SỐ KIẾN THIẾT</h1>
+                    <p class="logo-subtitle">VIỆT NAM</p>
+                </div>
+            </div>
+            <div class="balance-section">
+                <div class="balance-card">
+                    <span class="balance-label">Số dư</span>
+                    <span class="balance-amount" id="balance-display">500,000đ</span>
+                </div>
+                <button class="btn-deposit" id="btn-deposit" onclick="openDepositModal()">
+                    <span class="deposit-icon">💰</span> Nạp Tiền
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <div class="tab-nav-inner">
+            <button class="tab-btn active" data-tab="buy" onclick="switchTab('buy')">
+                <span class="tab-icon">🎫</span>
+                <span class="tab-label">Mua Vé</span>
+            </button>
+            <button class="tab-btn" data-tab="draw" onclick="switchTab('draw')">
+                <span class="tab-icon">🎯</span>
+                <span class="tab-label">Quay Số</span>
+                <span class="tab-badge" id="badge-draw-pending" style="display:none;">0</span>
+            </button>
+            <button class="tab-btn" data-tab="results" onclick="switchTab('results')">
+                <span class="tab-icon">📋</span>
+                <span class="tab-label">Kết Quả</span>
+            </button>
+            <button class="tab-btn" data-tab="tickets" onclick="switchTab('tickets')">
+                <span class="tab-icon">🎟️</span>
+                <span class="tab-label">Vé Của Tôi</span>
+                <span class="tab-badge" id="badge-tickets-pending" style="display:none;">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- ===== MUA VÉ TAB ===== -->
+        <section class="tab-content active" id="tab-buy">
+            <div class="section-header">
+                <h2>🎫 Mua Vé Số</h2>
+                <p>Chọn số may mắn của bạn - Mỗi vé <strong>10,000đ</strong></p>
+            </div>
+
+            <!-- Province Selector -->
+            <div class="card province-card">
+                <h3>📍 Chọn Đài Xổ Số</h3>
+                <div class="province-grid" id="province-grid">
+                    <button class="province-btn active" data-province="tphcm" onclick="selectProvince(this)">TP. Hồ Chí Minh</button>
+                    <button class="province-btn" data-province="dongnai" onclick="selectProvince(this)">Đồng Nai</button>
+                    <button class="province-btn" data-province="binhduong" onclick="selectProvince(this)">Bình Dương</button>
+                    <button class="province-btn" data-province="tayninh" onclick="selectProvince(this)">Tây Ninh</button>
+                    <button class="province-btn" data-province="cantho" onclick="selectProvince(this)">Cần Thơ</button>
+                    <button class="province-btn" data-province="dongthap" onclick="selectProvince(this)">Đồng Tháp</button>
+                    <button class="province-btn" data-province="camau" onclick="selectProvince(this)">Cà Mau</button>
+                    <button class="province-btn" data-province="bentre" onclick="selectProvince(this)">Bến Tre</button>
+                    <button class="province-btn" data-province="vungtau" onclick="selectProvince(this)">Vũng Tàu</button>
+                </div>
+            </div>
+
+            <!-- Number Input -->
+            <div class="card number-card">
+                <h3>🔢 Chọn Số Vé (6 chữ số)</h3>
+                <div class="number-input-section">
+                    <div class="digit-inputs" id="digit-inputs">
+                        <input type="text" class="digit-input" maxlength="1" data-index="0" oninput="handleDigitInput(this, 0)" onkeydown="handleDigitKeydown(event, 0)">
+                        <input type="text" class="digit-input" maxlength="1" data-index="1" oninput="handleDigitInput(this, 1)" onkeydown="handleDigitKeydown(event, 1)">
+                        <input type="text" class="digit-input" maxlength="1" data-index="2" oninput="handleDigitInput(this, 2)" onkeydown="handleDigitKeydown(event, 2)">
+                        <input type="text" class="digit-input" maxlength="1" data-index="3" oninput="handleDigitInput(this, 3)" onkeydown="handleDigitKeydown(event, 3)">
+                        <input type="text" class="digit-input" maxlength="1" data-index="4" oninput="handleDigitInput(this, 4)" onkeydown="handleDigitKeydown(event, 4)">
+                        <input type="text" class="digit-input" maxlength="1" data-index="5" oninput="handleDigitInput(this, 5)" onkeydown="handleDigitKeydown(event, 5)">
+                    </div>
+                    <div class="number-actions">
+                        <button class="btn-random" onclick="generateRandomNumber()">
+                            🎲 Số Ngẫu Nhiên
+                        </button>
+                        <button class="btn-clear" onclick="clearNumber()">
+                            🗑️ Xóa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ticket Preview -->
+                <div class="ticket-preview" id="ticket-preview" style="display:none;">
+                    <div class="ticket-card-preview">
+                        <div class="ticket-header-preview">
+                            <span class="ticket-logo-preview">🎱</span>
+                            <div>
+                                <div class="ticket-title-preview">XỔ SỐ KIẾN THIẾT</div>
+                                <div class="ticket-province-preview" id="preview-province">TP. Hồ Chí Minh</div>
+                            </div>
+                        </div>
+                        <div class="ticket-number-preview" id="preview-number">000000</div>
+                        <div class="ticket-footer-preview">
+                            <span>Giá: 10,000đ</span>
+                            <span id="preview-date"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-buy" id="btn-buy" onclick="buyTicket()">
+                    🛒 Mua Vé - 10,000đ
+                </button>
+
+                <!-- Quick Buy -->
+                <div class="quick-buy-section">
+                    <h4>⚡ Mua Nhanh Mức Cố Định</h4>
+                    <div class="quick-buy-grid">
+                        <button class="btn-quick" onclick="quickBuy(1)">1 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(5)">5 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(10)">10 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(50)">50 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(100)">100 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(500)">500 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(1000)">1,000 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(2000)">2,000 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(5000)">5,000 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(10000)">10,000 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(20000)">20,000 vé</button>
+                        <button class="btn-quick" onclick="quickBuy(50000)">50,000 vé</button>
+                        <button class="btn-quick featured" onclick="quickBuy(1000000)">1,000,000 vé</button>
+                    </div>
+                    <div class="quick-buy-custom">
+                        <input type="number" id="custom-quick-buy" placeholder="Nhập số lượng vé tùy ý (không giới hạn)..." min="1">
+                        <button class="btn-quick-custom" onclick="customQuickBuy()">Mua Ngay</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prize Structure -->
+            <div class="card prize-card">
+                <h3>🏆 Cơ Cấu Giải Thưởng</h3>
+                <div class="prize-table-wrapper">
+                    <table class="prize-table">
+                        <thead>
+                            <tr>
+                                <th>Giải</th>
+                                <th>Số lượng</th>
+                                <th>Trùng</th>
+                                <th>Giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="prize-special">
+                                <td>🥇 Đặc Biệt</td>
+                                <td>1</td>
+                                <td>6 chữ số</td>
+                                <td class="prize-amount">2,000,000,000đ</td>
+                            </tr>
+                            <tr class="prize-sub-special">
+                                <td>🌟 Phụ Đặc Biệt</td>
+                                <td>9</td>
+                                <td>5 số cuối ĐB</td>
+                                <td class="prize-amount">50,000,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>🥈 Giải Nhất</td>
+                                <td>1</td>
+                                <td>5 chữ số</td>
+                                <td class="prize-amount">30,000,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>🥉 Giải Nhì</td>
+                                <td>1</td>
+                                <td>5 chữ số</td>
+                                <td class="prize-amount">15,000,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>Giải Ba</td>
+                                <td>2</td>
+                                <td>5 chữ số</td>
+                                <td class="prize-amount">10,000,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>Giải Tư</td>
+                                <td>7</td>
+                                <td>5 chữ số</td>
+                                <td class="prize-amount">3,000,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>Giải Năm</td>
+                                <td>1</td>
+                                <td>4 chữ số</td>
+                                <td class="prize-amount">1,000,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>Giải Sáu</td>
+                                <td>3</td>
+                                <td>4 chữ số</td>
+                                <td class="prize-amount">400,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>Giải Bảy</td>
+                                <td>1</td>
+                                <td>3 chữ số</td>
+                                <td class="prize-amount">200,000đ</td>
+                            </tr>
+                            <tr>
+                                <td>Giải Tám</td>
+                                <td>1</td>
+                                <td>2 chữ số</td>
+                                <td class="prize-amount">100,000đ</td>
+                            </tr>
+                            <tr class="prize-consolation">
+                                <td>🎖️ Khuyến Khích</td>
+                                <td>45</td>
+                                <td>Sai 1 số ĐB (trừ số đầu)</td>
+                                <td class="prize-amount">6,000,000đ</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== QUAY SỐ TAB ===== -->
+        <section class="tab-content" id="tab-draw">
+            <div class="section-header">
+                <h2>🎯 Quay Số Mở Thưởng</h2>
+                <p>Chọn đài mở thưởng và nhấn quay số để dò kết quả xổ số</p>
+            </div>
+
+            <!-- Select draw province -->
+            <div class="card draw-province-card">
+                <div class="draw-province-header">
+                    <span class="dph-title">📍 Đài Mở Thưởng:</span>
+                    <span class="dph-badge" id="draw-pending-badge">0 vé chờ dò</span>
+                </div>
+                <div class="draw-province-chips" id="draw-province-chips">
+                    <!-- Populated dynamically / clickable chips -->
+                </div>
+            </div>
+
+            <div class="card draw-card">
+                <div class="draw-machine" id="draw-machine">
+                    <div class="draw-globe">
+                        <div class="globe-inner" id="globe-inner">
+                            <div class="ball ball-1">🔴</div>
+                            <div class="ball ball-2">🟡</div>
+                            <div class="ball ball-3">🔵</div>
+                            <div class="ball ball-4">🟢</div>
+                            <div class="ball ball-5">🟣</div>
+                        </div>
+                    </div>
+                    <div class="draw-status" id="draw-status">Sẵn sàng mở thưởng!</div>
+                </div>
+
+                <div class="draw-btn-group">
+                    <button class="btn-draw" id="btn-draw" onclick="startDraw(false)">
+                        🎰 QUAY SỐ MỞ THƯỞNG
+                    </button>
+                    <button class="btn-draw-fast" id="btn-draw-fast" onclick="startDraw(true)" title="Quay ngay không cần chờ hoạt ảnh">
+                        ⚡ Quay Nhanh
+                    </button>
+                </div>
+
+                <!-- Draw Results Display -->
+                <div class="draw-results" id="draw-results" style="display:none;">
+                    <div class="draw-results-header">
+                        <h3>📋 Kết Quả Mở Thưởng</h3>
+                        <div class="draw-province-date">
+                            <span id="draw-province-label"></span>
+                            <span id="draw-date-label"></span>
+                        </div>
+                    </div>
+                    <div id="draw-check-summary" class="draw-check-summary" style="display:none;"></div>
+                    <div class="results-table-container" id="results-table-container">
+                        <!-- Results will be populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== KẾT QUẢ TAB ===== -->
+        <section class="tab-content" id="tab-results">
+            <div class="section-header">
+                <h2>📋 Kết Quả Xổ Số</h2>
+                <p>Xem kết quả các kỳ quay và tra cứu vé số nhanh</p>
+            </div>
+
+            <!-- Quick Ticket Checker Widget -->
+            <div class="card direct-checker-card">
+                <h3>🔍 Tra Cứu & Dò Vé Số Nhanh</h3>
+                <p class="checker-subtitle">Nhập số vé cần dò để kiểm tra trực tiếp với các kỳ quay:</p>
+                <div class="direct-checker-form">
+                    <div class="checker-input-group">
+                        <input type="text" id="checker-number-input" maxlength="6" placeholder="Nhập 6 chữ số (vd: 123456)" oninput="this.value = this.value.replace(/\D/g, '')">
+                        <select id="checker-draw-select">
+                            <option value="latest">Kỳ quay mới nhất</option>
+                        </select>
+                        <button class="btn-do-check" onclick="checkDirectNumber()">🔍 Dò Số</button>
+                    </div>
+                </div>
+                <div id="checker-result-box" class="checker-result-box" style="display:none;"></div>
+            </div>
+
+            <div class="section-sub-header">
+                <h3>📜 Lịch Sử Các Kỳ Quay</h3>
+            </div>
+
+            <div id="past-draws-container">
+                <div class="card empty-state" id="no-results-msg">
+                    <div class="empty-icon">📭</div>
+                    <p>Chưa có kết quả nào. Hãy quay số ở tab <strong>"Quay Số"</strong>!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== VÉ CỦA TÔI TAB ===== -->
+        <section class="tab-content" id="tab-tickets">
+            <div class="section-header">
+                <h2>🎟️ Vé Của Tôi</h2>
+                <p>Quản lý và dò kết quả vé số của bạn</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-bar" id="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-total-tickets">0</span>
+                    <span class="stat-label">Tổng vé</span>
+                </div>
+                <div class="stat-item stat-pending">
+                    <span class="stat-value" id="stat-pending-tickets">0</span>
+                    <span class="stat-label">⏳ Chưa dò</span>
+                </div>
+                <div class="stat-item stat-checked">
+                    <span class="stat-value" id="stat-checked-tickets">0</span>
+                    <span class="stat-label">✅ Đã dò</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-total-spent">0đ</span>
+                    <span class="stat-label">Tổng mua</span>
+                </div>
+                <div class="stat-item stat-win">
+                    <span class="stat-value" id="stat-total-won">0đ</span>
+                    <span class="stat-label">Tổng thắng</span>
+                </div>
+                <div class="stat-item" id="stat-profit-item">
+                    <span class="stat-value" id="stat-profit">0đ</span>
+                    <span class="stat-label">Lời / Lỗ</span>
+                </div>
+            </div>
+
+            <!-- Prominent Status Banner -->
+            <div class="ticket-status-banner" id="ticket-status-banner">
+                <!-- Populated dynamically by JS -->
+            </div>
+
+            <!-- Toolbar: Filter + Actions -->
+            <div class="tickets-toolbar">
+                <div class="filter-tabs">
+                    <button class="filter-btn active" data-filter="all" id="filter-btn-all" onclick="filterTickets('all')">Tất cả (0)</button>
+                    <button class="filter-btn" data-filter="pending" id="filter-btn-pending" onclick="filterTickets('pending')">⏳ Chưa dò (0)</button>
+                    <button class="filter-btn" data-filter="won" id="filter-btn-won" onclick="filterTickets('won')">🎉 Trúng (0)</button>
+                    <button class="filter-btn" data-filter="lost" id="filter-btn-lost" onclick="filterTickets('lost')">❌ Không trúng (0)</button>
+                </div>
+                <div class="ticket-actions" id="ticket-actions" style="display:none;">
+                    <span class="action-label">🗑️ Xóa vé đã dò:</span>
+                    <button class="btn-delete-bulk" onclick="deleteCheckedTickets(100)">100</button>
+                    <button class="btn-delete-bulk" onclick="deleteCheckedTickets(1000)">1,000</button>
+                    <button class="btn-delete-bulk" onclick="deleteCheckedTickets(5000)">5,000</button>
+                    <button class="btn-delete-bulk" onclick="deleteCheckedTickets(10000)">10,000</button>
+                    <button class="btn-delete-bulk" onclick="deleteCheckedTickets(50000)">50,000</button>
+                    <button class="btn-delete-bulk btn-delete-all" onclick="deleteAllCheckedTickets()">Tất cả</button>
+                </div>
+            </div>
+
+            <!-- Check All Button -->
+            <button class="btn-check-all" id="btn-check-all" onclick="checkAllTickets()" style="display:none;">
+                🔍 Dò Tất Cả Vé
+            </button>
+
+            <!-- Compact Ticket List -->
+            <div class="card tickets-list-card" id="tickets-list-card">
+                <div class="tickets-list-header">
+                    <span class="tlh-col tlh-num">#</span>
+                    <span class="tlh-col tlh-number">Số vé</span>
+                    <span class="tlh-col tlh-province">Đài</span>
+                    <span class="tlh-col tlh-date">Ngày</span>
+                    <span class="tlh-col tlh-status">Trạng thái</span>
+                    <span class="tlh-col tlh-prize">Thắng</span>
+                </div>
+                <div class="tickets-list-body" id="tickets-list-body">
+                    <!-- Rows populated by JS -->
+                </div>
+                <div class="tickets-list-footer" id="tickets-list-footer" style="display:none;">
+                    <span id="showing-count"></span>
+                </div>
+            </div>
+
+            <div class="card empty-state" id="no-tickets-msg" style="display:none;">
+                <div class="empty-icon">🎫</div>
+                <p>Bạn chưa mua vé nào. Hãy qua tab <strong>"Mua Vé"</strong> để bắt đầu!</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Deposit Modal -->
+    <div class="modal-overlay" id="deposit-modal" onclick="closeDepositModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>💰 Nạp Tiền</h3>
+                <button class="modal-close" onclick="closeDepositModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Chọn số tiền muốn nạp:</p>
+                <div class="deposit-options">
+                    <button class="deposit-btn" onclick="deposit(10000000)">10 Triệu</button>
+                    <button class="deposit-btn" onclick="deposit(50000000)">50 Triệu</button>
+                    <button class="deposit-btn featured" onclick="deposit(100000000)">100 Triệu</button>
+                    <button class="deposit-btn" onclick="deposit(500000000)">500 Triệu</button>
+                    <button class="deposit-btn featured" onclick="deposit(1000000000)">1 Tỷ</button>
+                    <button class="deposit-btn featured" onclick="deposit(10000000000)">10 Tỷ</button>
+                </div>
+                <div class="deposit-custom">
+                    <label for="custom-amount">Hoặc nhập số tiền tùy ý:</label>
+                    <div class="custom-input-group">
+                        <input type="number" id="custom-amount" placeholder="Nhập số tiền (VD: 100000000)..." min="10000" step="10000">
+                        <button class="btn-deposit-confirm" onclick="depositCustom()">Nạp</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Win Notification -->
+    <div class="win-notification" id="win-notification" style="display:none;">
+        <div class="win-content">
+            <button class="win-close-corner" onclick="closeWinNotification()" title="Đóng">&times;</button>
+            <div class="win-icon">🎉</div>
+            <h3 class="win-title">CHÚC MỪNG!</h3>
+            <div class="win-message" id="win-message"></div>
+            <div class="win-amount" id="win-amount"></div>
+            <button class="btn-win-close" onclick="closeWinNotification()">Tuyệt Vời! 🎊</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
