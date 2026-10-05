@@ -152,11 +152,10 @@ body::before {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(10, 10, 26, 0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: #0d0d22;
     border-bottom: 1px solid var(--glass-border);
     padding: 0 20px;
+    transform: translateZ(0);
 }
 
 .header-inner {
@@ -184,25 +183,12 @@ body::before {
     align-items: center;
     justify-content: center;
     font-size: 26px;
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-    animation: logo-glow 3s ease-in-out infinite alternate;
-}
-
-@keyframes logo-glow {
-    0% { box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
-    100% { box-shadow: 0 4px 25px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.1); }
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.35);
+    transform: translateZ(0);
 }
 
 .logo-ball {
-    animation: ball-spin 4s ease-in-out infinite;
     display: inline-block;
-}
-
-@keyframes ball-spin {
-    0%, 100% { transform: rotate(0deg) scale(1); }
-    25% { transform: rotate(15deg) scale(1.1); }
-    50% { transform: rotate(0deg) scale(1); }
-    75% { transform: rotate(-15deg) scale(1.1); }
 }
 
 .logo-text h1 {
@@ -294,11 +280,10 @@ body::before {
     position: sticky;
     top: 79px;
     z-index: 90;
-    background: rgba(10, 10, 26, 0.88);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    background: #0d0d22;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding: 0 20px;
+    transform: translateZ(0);
 }
 
 .tab-nav-inner {
@@ -326,13 +311,14 @@ body::before {
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-med);
+    transition: var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     white-space: nowrap;
     position: relative;
+    transform: translateZ(0);
 }
 
 .tab-btn:hover {
@@ -372,12 +358,6 @@ body::before {
     border-radius: 12px;
     margin-left: 2px;
     box-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
-    animation: badgePulse 2s infinite;
-}
-
-@keyframes badgePulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
 }
 
 /* ---- Main Content ---- */
@@ -391,22 +371,10 @@ body::before {
 
 .tab-content {
     display: none;
-    animation: fadeInTab 0.4s ease;
 }
 
 .tab-content.active {
     display: block;
-}
-
-@keyframes fadeInTab {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .section-header {
@@ -433,14 +401,13 @@ body::before {
 /* ---- Card Component ---- */
 .card {
     background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: 28px;
     margin-bottom: 24px;
     box-shadow: var(--glass-shadow);
-    transition: var(--transition-med);
+    transition: var(--transition-fast);
+    transform: translateZ(0);
 }
 
 .card:hover {
@@ -471,7 +438,7 @@ body::before {
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-med);
+    transition: var(--transition-fast);
 }
 
 .province-btn:hover {
@@ -512,7 +479,7 @@ body::before {
     font-weight: 800;
     text-align: center;
     outline: none;
-    transition: var(--transition-med);
+    transition: var(--transition-fast);
     caret-color: var(--gold-primary);
 }
 
@@ -520,7 +487,6 @@ body::before {
     border-color: var(--gold-primary);
     background: rgba(255, 215, 0, 0.1);
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.15);
-    transform: translateY(-2px);
 }
 
 .digit-input::placeholder {
@@ -541,7 +507,7 @@ body::before {
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-med);
+    transition: var(--transition-fast);
     border: none;
 }
 
@@ -572,18 +538,6 @@ body::before {
     display: flex;
     justify-content: center;
     margin: 20px 0;
-    animation: fadeInUp 0.4s ease;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .ticket-card-preview {
@@ -593,23 +547,8 @@ body::before {
     padding: 24px 32px;
     min-width: 300px;
     position: relative;
-    overflow: hidden;
     box-shadow: 0 10px 40px rgba(255, 215, 0, 0.15);
-}
-
-.ticket-card-preview::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: conic-gradient(from 0deg, transparent, rgba(255, 215, 0, 0.03), transparent, rgba(255, 215, 0, 0.03), transparent);
-    animation: ticket-shimmer 6s linear infinite;
-}
-
-@keyframes ticket-shimmer {
-    to { transform: rotate(360deg); }
+    transform: translateZ(0);
 }
 
 .ticket-header-preview {

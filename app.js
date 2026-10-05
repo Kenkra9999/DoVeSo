@@ -187,16 +187,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 function createParticles() {
     const container = document.getElementById('particles-bg');
     if (!container) return;
-    const colors = ['#ffd700', '#e63946', '#6366f1', '#2ecc71', '#ff6b6b'];
+    container.innerHTML = '';
+    const colors = ['#ffd700', '#e63946', '#6366f1', '#2ecc71'];
     
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 6; i++) {
         const particle = document.createElement('div');
         particle.classList.add('particle');
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const size = Math.random() * 4 + 2;
-        const left = Math.random() * 100;
-        const duration = Math.random() * 15 + 10;
-        const delay = Math.random() * 10;
+        const color = colors[i % colors.length];
+        const size = Math.random() * 3 + 2;
+        const left = Math.random() * 94 + 3;
+        const duration = Math.random() * 12 + 14;
+        const delay = Math.random() * 6;
         
         particle.style.cssText = `
             width: ${size}px;
@@ -205,7 +206,8 @@ function createParticles() {
             left: ${left}%;
             animation-duration: ${duration}s;
             animation-delay: ${delay}s;
-            box-shadow: 0 0 ${size * 2}px ${color};
+            transform: translateZ(0);
+            will-change: transform;
         `;
         container.appendChild(particle);
     }
