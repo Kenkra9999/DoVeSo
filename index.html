@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2.1.0">
+    <link rel="stylesheet" href="style.css?v=2.2.0">
 </head>
 <body>
     <!-- Floating Particles Background -->
@@ -154,10 +154,12 @@
                         <button class="btn-quick" onclick="quickBuy(10000)">10,000 vé</button>
                         <button class="btn-quick" onclick="quickBuy(20000)">20,000 vé</button>
                         <button class="btn-quick" onclick="quickBuy(50000)">50,000 vé</button>
-                        <button class="btn-quick featured" onclick="quickBuy(1000000)">1,000,000 vé</button>
+                        <button class="btn-quick featured" onclick="quickBuy(1000000)">1 Triệu vé (1M)</button>
+                        <button class="btn-quick featured" onclick="quickBuy(10000000)">10 Triệu vé (10M)</button>
+                        <button class="btn-quick featured" onclick="quickBuy(100000000)">100 Triệu vé (100M)</button>
                     </div>
                     <div class="quick-buy-custom">
-                        <input type="number" id="custom-quick-buy" placeholder="Nhập số lượng vé tùy ý (không giới hạn)..." min="1">
+                        <input type="number" id="custom-quick-buy" placeholder="Nhập số lượng vé tùy ý (VD: 500000000 cho 500 triệu vé)..." min="1">
                         <button class="btn-quick-custom" onclick="customQuickBuy()">Mua Ngay</button>
                     </div>
                 </div>
@@ -475,6 +477,6 @@
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
-    <script src="app.js?v=2.1.0"></script>
+    <script src="app.js?v=2.2.0"></script>
 </body>
 </html>
